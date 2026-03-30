@@ -40,9 +40,9 @@
     <h1>Breve Deleite - Controle</h1>
     
     <div class="tabs">
-        <button class="tab active" onclick="showTab('produtos', this)">📦 Produtos</button>
-        <button class="tab" onclick="showTab('vendas', this)">🛒 Vender</button>
-        <button class="tab" onclick="showTab('relatorios', this)">📊 Relatórios</button>
+        <button class="tab active" id="tab-prod" onclick="showTab('produtos', this)">📦 Produtos</button>
+        <button class="tab" id="tab-vend" onclick="showTab('vendas', this)">🛒 Vender</button>
+        <button class="tab" id="tab-rel" onclick="showTab('relatorios', this)">📊 Relatórios</button>
     </div>
 
     <div id="produtos" class="section active">
@@ -71,7 +71,7 @@
             <h3>Histórico Recente</h3>
             <div style="font-size: 14px;">
                 Mostrar: 
-                <select id="v-limite" onchange="escutarVendas()">
+                <select id="v-limite" onchange="window.escutarVendas()">
                     <option value="25">25 vendas</option>
                     <option value="50">50 vendas</option>
                     <option value="100">100 vendas</option>
@@ -121,9 +121,10 @@
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
         btn.classList.add('active');
+        
         if(tabId === 'vendas') {
             popularSelect();
-            escutarVendas();
+            window.escutarVendas(); // Carrega a lista sempre que entrar na aba
         }
     };
 
@@ -202,7 +203,7 @@
         popularSelect();
     };
 
-    // Listagem dinâmica na aba Vendas
+    // Função que busca as vendas (agora global para funcionar no carregamento)
     window.escutarVendas = () => {
         if(unsubscribeVendas) unsubscribeVendas();
         const numLimite = parseInt(document.getElementById('v-limite').value);
@@ -210,10 +211,13 @@
         
         unsubscribeVendas = onSnapshot(q, (snap) => {
             let html = `<table><thead><tr><th>Data</th><th>Produto</th><th>Qtd</th><th>Total</th><th>Ação</th></tr></thead><tbody>`;
+            if (snap.empty) {
+                html += `<tr><td colspan="5" style="text-align:center">Nenhuma venda encontrada.</td></tr>`;
+            }
             snap.forEach(doc => {
                 const v = doc.data();
                 const total = v.precoUn * v.qtd;
-                const dataFormatada = v.data.split('-').reverse().join('/');
+                const dataFormatada = v.data ? v.data.split('-').reverse().join('/') : '---';
                 html += `<tr>
                     <td>${dataFormatada}</td>
                     <td>${v.prodNome}</td>
