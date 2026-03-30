@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Breve Deleite - Controle</title>
     <style>
-        :root { --primary: #e63946; --success: #16a34a; --bg: #f1f5f9; --surface: #ffffff; --text: #1e293b; --border: #cbd5e1; }
+        :root { --primary: #e63946; --success: #16a34a; --bg: #f1f5f9; --surface: #ffffff; --text: #1e293b; --border: #cbd5e1; --edit: #f59e0b; }
         body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; background: var(--bg); color: var(--text); }
         .container { max-width: 900px; margin: auto; background: var(--surface); padding: 25px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
         h1 { color: var(--primary); margin-top: 0; border-left: 5px solid var(--primary); padding-left: 15px; font-size: 24px; }
@@ -29,6 +29,8 @@
         .card h3 { margin: 0; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
         .card p { margin: 5px 0 0; font-size: 18px; font-weight: bold; }
         .card.lucro { border-top: 4px solid var(--success); }
+        .btn-edit { color: var(--edit); background: none; border: none; cursor: pointer; font-size: 16px; margin-right: 8px; }
+        .btn-del { color: var(--primary); background: none; border: none; cursor: pointer; font-size: 16px; }
     </style>
 </head>
 <body>
@@ -43,11 +45,13 @@
     </div>
 
     <div id="produtos" class="section active">
+        <h3 id="form-title">Cadastrar Produto</h3>
         <form id="form-produto" class="form-grid">
+            <input type="hidden" id="p-id">
             <div class="form-group"><label>Nome</label><input type="text" id="p-nome" required></div>
             <div class="form-group"><label>Custo (R$)</label><input type="number" id="p-custo" step="0.01" required></div>
             <div class="form-group"><label>Preço Sugerido (R$)</label><input type="number" id="p-preco" step="0.01" required></div>
-            <div class="form-group"><label>&nbsp;</label><button type="submit" class="btn-action">Salvar</button></div>
+            <div class="form-group"><label>&nbsp;</label><button type="submit" id="btn-salvar-prod" class="btn-action">Salvar</button></div>
         </form>
         <div id="listagem-produtos" class="table-container"></div>
     </div>
@@ -79,9 +83,8 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, query, orderBy, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // Configuração extraída da sua imagem
     const firebaseConfig = {
         apiKey: "AIzaSyB861qyg_6svQUqrd069ZPAfPH6ZRWbBCs",
         authDomain: "breve-deleite.firebaseapp.com",
@@ -107,24 +110,48 @@
 
     const fmt = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-    // --- PRODUTOS ---
+    // --- PRODUTOS (SALVAR / EDITAR) ---
     document.getElementById('form-produto').onsubmit = async (e) => {
         e.preventDefault();
-        const p = {
+        const id = document.getElementById('p-id').value;
+        const dados = {
             nome: document.getElementById('p-nome').value,
             custo: parseFloat(document.getElementById('p-custo').value),
             preco: parseFloat(document.getElementById('p-preco').value)
         };
-        await addDoc(collection(db, "produtos"), p);
+
+        if (id) {
+            await updateDoc(doc(db, "produtos", id), dados);
+            document.getElementById('p-id').value = "";
+            document.getElementById('form-title').innerText = "Cadastrar Produto";
+        } else {
+            await addDoc(collection(db, "produtos"), dados);
+        }
+        
         e.target.reset();
+    };
+
+    window.editarProduto = (id) => {
+        const p = cacheProdutos.find(x => x.id === id);
+        if(p) {
+            document.getElementById('p-id').value = p.id;
+            document.getElementById('p-nome').value = p.nome;
+            document.getElementById('p-custo').value = p.custo;
+            document.getElementById('p-preco').value = p.preco;
+            document.getElementById('form-title').innerText = "Editando: " + p.nome;
+            window.scrollTo(0,0);
+        }
     };
 
     onSnapshot(collection(db, "produtos"), (snap) => {
         cacheProdutos = snap.docs.map(d => ({id: d.id, ...d.data()}));
-        let html = `<table><thead><tr><th>Produto</th><th>Custo</th><th>Preço</th><th>Ação</th></tr></thead><tbody>`;
+        let html = `<table><thead><tr><th>Produto</th><th>Custo</th><th>Preço</th><th>Ações</th></tr></thead><tbody>`;
         cacheProdutos.forEach(p => {
             html += `<tr><td>${p.nome}</td><td>${fmt(p.custo)}</td><td>${fmt(p.preco)}</td>
-            <td><button onclick="window.removerItem('produtos','${p.id}')" style="color:red; background:none; border:none; cursor:pointer;">✖</button></td></tr>`;
+            <td>
+                <button class="btn-edit" onclick="window.editarProduto('${p.id}')">✏️</button>
+                <button class="btn-del" onclick="window.removerItem('produtos','${p.id}')">✖</button>
+            </td></tr>`;
         });
         document.getElementById('listagem-produtos').innerHTML = html + `</tbody></table>`;
     });
