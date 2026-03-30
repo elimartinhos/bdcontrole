@@ -31,6 +31,7 @@
         .card.lucro { border-top: 4px solid var(--success); }
         .btn-edit { color: var(--edit); background: none; border: none; cursor: pointer; font-size: 16px; margin-right: 8px; }
         .btn-del { color: var(--primary); background: none; border: none; cursor: pointer; font-size: 16px; }
+        .header-list { display: flex; justify-content: space-between; align-items: center; margin-top: 30px; }
     </style>
 </head>
 <body>
@@ -57,13 +58,27 @@
     </div>
 
     <div id="vendas" class="section">
+        <h3>Lançar Venda</h3>
         <form id="form-venda" class="form-grid">
             <div class="form-group"><label>Data</label><input type="date" id="v-data" required></div>
             <div class="form-group"><label>Produto</label><select id="v-prod" onchange="setPrecoSugerido()" required><option value="">Carregando...</option></select></div>
             <div class="form-group"><label>Qtd</label><input type="number" id="v-qtd" min="1" value="1" required></div>
             <div class="form-group"><label>Preço Venda (R$)</label><input type="number" id="v-preco" step="0.01" required></div>
-            <div class="form-group"><label>&nbsp;</label><button type="submit" class="btn-action">Lançar Venda</button></div>
+            <div class="form-group"><label>&nbsp;</label><button type="submit" class="btn-action">Confirmar Venda</button></div>
         </form>
+
+        <div class="header-list">
+            <h3>Histórico Recente</h3>
+            <div style="font-size: 14px;">
+                Mostrar: 
+                <select id="v-limite" onchange="escutarVendas()">
+                    <option value="25">25 vendas</option>
+                    <option value="50">50 vendas</option>
+                    <option value="100">100 vendas</option>
+                </select>
+            </div>
+        </div>
+        <div id="listagem-vendas-recente" class="table-container"></div>
     </div>
 
     <div id="relatorios" class="section">
@@ -83,7 +98,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyB861qyg_6svQUqrd069ZPAfPH6ZRWbBCs",
@@ -98,6 +113,7 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     let cacheProdutos = [];
+    let unsubscribeVendas = null;
 
     // --- NAVEGAÇÃO ---
     window.showTab = (tabId, btn) => {
@@ -105,12 +121,15 @@
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
         btn.classList.add('active');
-        if(tabId === 'vendas') popularSelect();
+        if(tabId === 'vendas') {
+            popularSelect();
+            escutarVendas();
+        }
     };
 
     const fmt = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-    // --- PRODUTOS (SALVAR / EDITAR) ---
+    // --- PRODUTOS ---
     document.getElementById('form-produto').onsubmit = async (e) => {
         e.preventDefault();
         const id = document.getElementById('p-id').value;
@@ -119,7 +138,6 @@
             custo: parseFloat(document.getElementById('p-custo').value),
             preco: parseFloat(document.getElementById('p-preco').value)
         };
-
         if (id) {
             await updateDoc(doc(db, "produtos", id), dados);
             document.getElementById('p-id').value = "";
@@ -127,7 +145,6 @@
         } else {
             await addDoc(collection(db, "produtos"), dados);
         }
-        
         e.target.reset();
     };
 
@@ -178,11 +195,35 @@
             custoUn: p.custo,
             precoUn: parseFloat(document.getElementById('v-preco').value),
             qtd: parseInt(document.getElementById('v-qtd').value),
-            dataRef: new Date(document.getElementById('v-data').value + "T12:00:00")
+            timestamp: new Date() 
         };
         await addDoc(collection(db, "vendas"), v);
-        alert("Venda registrada!");
         e.target.reset();
+        popularSelect();
+    };
+
+    // Listagem dinâmica na aba Vendas
+    window.escutarVendas = () => {
+        if(unsubscribeVendas) unsubscribeVendas();
+        const numLimite = parseInt(document.getElementById('v-limite').value);
+        const q = query(collection(db, "vendas"), orderBy("timestamp", "desc"), limit(numLimite));
+        
+        unsubscribeVendas = onSnapshot(q, (snap) => {
+            let html = `<table><thead><tr><th>Data</th><th>Produto</th><th>Qtd</th><th>Total</th><th>Ação</th></tr></thead><tbody>`;
+            snap.forEach(doc => {
+                const v = doc.data();
+                const total = v.precoUn * v.qtd;
+                const dataFormatada = v.data.split('-').reverse().join('/');
+                html += `<tr>
+                    <td>${dataFormatada}</td>
+                    <td>${v.prodNome}</td>
+                    <td>${v.qtd}</td>
+                    <td>${fmt(total)}</td>
+                    <td><button class="btn-del" onclick="window.removerItem('vendas','${doc.id}')">✖</button></td>
+                </tr>`;
+            });
+            document.getElementById('listagem-vendas-recente').innerHTML = html + `</tbody></table>`;
+        });
     };
 
     // --- RELATÓRIOS ---
