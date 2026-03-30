@@ -124,7 +124,7 @@
         
         if(tabId === 'vendas') {
             popularSelect();
-            window.escutarVendas(); // Carrega a lista sempre que entrar na aba
+            window.escutarVendas(); 
         }
     };
 
@@ -203,11 +203,11 @@
         popularSelect();
     };
 
-    // Função que busca as vendas (agora global para funcionar no carregamento)
     window.escutarVendas = () => {
         if(unsubscribeVendas) unsubscribeVendas();
         const numLimite = parseInt(document.getElementById('v-limite').value);
-        const q = query(collection(db, "vendas"), orderBy("timestamp", "desc"), limit(numLimite));
+        // CORREÇÃO AQUI: Organizando por 'data' garante que pegue todas as vendas do banco
+        const q = query(collection(db, "vendas"), orderBy("data", "desc"), limit(numLimite));
         
         unsubscribeVendas = onSnapshot(q, (snap) => {
             let html = `<table><thead><tr><th>Data</th><th>Produto</th><th>Qtd</th><th>Total</th><th>Ação</th></tr></thead><tbody>`;
