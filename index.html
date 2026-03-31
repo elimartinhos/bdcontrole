@@ -18,7 +18,6 @@
         body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; background: var(--bg); color: var(--text); }
         .container { max-width: 900px; margin: auto; background: var(--surface); padding: 25px; border-radius: 12px; box-shadow: 0 10px 20px -5px rgba(0,0,0,0.4); }
         
-        /* Estilos da Logo */
         .header-logo { text-align: center; margin-bottom: 25px; }
         .header-logo img { width: 250px; height: auto; display: block; margin: 0 auto; aspect-ratio: 1033 / 537; object-fit: contain; }
         .header-logo h2 { margin: 10px 0 0; font-size: 16px; letter-spacing: 4px; color: var(--text); opacity: 0.9; font-weight: bold; }
@@ -47,6 +46,12 @@
         .btn-del { color: var(--delete); background: none; border: none; cursor: pointer; font-size: 16px; }
         .header-list { display: flex; justify-content: space-between; align-items: center; margin-top: 30px; }
         .header-list h3 { margin: 0; }
+        
+        /* Paginação */
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 15px; font-weight: bold; }
+        .pagination button { background: var(--border); color: var(--text); border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        .pagination button:hover:not(:disabled) { background: var(--primary); color: var(--bg); }
+        .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -97,13 +102,19 @@
             </div>
         </div>
         <div id="listagem-vendas-recente" class="table-container"></div>
+        <div class="pagination">
+            <button id="btn-prev" onclick="mudarPagina(-1)">Anterior</button>
+            <span>Página <span id="pag-atual">1</span></span>
+            <button id="btn-next" onclick="mudarPagina(1)">Próxima</button>
+        </div>
     </div>
 
     <div id="relatorios" class="section">
         <div class="form-grid" style="align-items: end;">
             <div class="form-group"><label>De:</label><input type="date" id="r-ini"></div>
             <div class="form-group"><label>Até:</label><input type="date" id="r-fim"></div>
-            <button onclick="carregarRelatorio()" class="btn-action" style="background:var(--primary); color:var(--bg);">Filtrar</button>
+            <button onclick="carregarRelatorio(false)" class="btn-action" style="background:var(--primary); color:var(--bg);">Por Venda</button>
+            <button onclick="carregarRelatorio(true)" class="btn-action" style="background:var(--edit); color:var(--bg);">Por Produto</button>
         </div>
         <div class="summary-cards">
             <div class="card"><h3>Receita</h3><p id="res-rec">R$ 0,00</p></div>
@@ -116,7 +127,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyB861qyg_6svQUqrd069ZPAfPH6ZRWbBCs",
@@ -132,8 +143,9 @@
     const db = getFirestore(app);
     let cacheProdutos = [];
     let unsubscribeVendas = null;
+    let todasVendasCache = [];
+    let paginaAtual = 0;
 
-    // --- NAVEGAÇÃO ---
     window.showTab = (tabId, btn) => {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -148,7 +160,6 @@
 
     const fmt = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-    // --- PRODUTOS ---
     document.getElementById('form-produto').onsubmit = async (e) => {
         e.preventDefault();
         const id = document.getElementById('p-id').value;
@@ -192,7 +203,6 @@
         document.getElementById('listagem-produtos').innerHTML = html + `</tbody></table>`;
     });
 
-    // --- VENDAS ---
     function popularSelect() {
         const sel = document.getElementById('v-prod');
         sel.innerHTML = '<option value="">Selecione...</option>';
@@ -224,7 +234,7 @@
             custoUn: p.custo,
             precoUn: parseFloat(document.getElementById('v-preco').value),
             qtd: parseInt(document.getElementById('v-qtd').value),
-            timestamp: new Date() 
+            timestamp: new Date().getTime() 
         };
         await addDoc(collection(db, "vendas"), v);
         e.target.reset();
@@ -233,56 +243,104 @@
 
     window.escutarVendas = () => {
         if(unsubscribeVendas) unsubscribeVendas();
-        const numLimite = parseInt(document.getElementById('v-limite').value);
-        const q = query(collection(db, "vendas"), orderBy("data", "desc"), limit(numLimite));
+        paginaAtual = 0;
         
+        const q = query(collection(db, "vendas"), orderBy("data", "desc"));
         unsubscribeVendas = onSnapshot(q, (snap) => {
-            let html = `<table><thead><tr><th>Data</th><th>Produto</th><th>Qtd</th><th>Total</th><th>Ação</th></tr></thead><tbody>`;
-            if (snap.empty) {
-                html += `<tr><td colspan="5" style="text-align:center">Nenhuma venda encontrada.</td></tr>`;
-            }
-            snap.forEach(doc => {
-                const v = doc.data();
-                const total = v.precoUn * v.qtd;
-                const dataFormatada = v.data ? v.data.split('-').reverse().join('/') : '---';
-                html += `<tr>
-                    <td>${dataFormatada}</td>
-                    <td>${v.prodNome}</td>
-                    <td>${v.qtd}</td>
-                    <td>${fmt(total)}</td>
-                    <td><button class="btn-del" onclick="window.removerItem('vendas','${doc.id}')">✖</button></td>
-                </tr>`;
-            });
-            document.getElementById('listagem-vendas-recente').innerHTML = html + `</tbody></table>`;
+            todasVendasCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            // Ordenação secundária por timestamp para manter coerência caso a data seja igual
+            todasVendasCache.sort((a, b) => b.data.localeCompare(a.data) || (b.timestamp || 0) - (a.timestamp || 0));
+            renderizarTabelaVendas();
         });
     };
 
-    // --- RELATÓRIOS ---
-    window.carregarRelatorio = async () => {
+    window.mudarPagina = (dir) => {
+        paginaAtual += dir;
+        renderizarTabelaVendas();
+    };
+
+    function renderizarTabelaVendas() {
+        const limite = parseInt(document.getElementById('v-limite').value);
+        const inicio = paginaAtual * limite;
+        const fim = inicio + limite;
+        const itensPagina = todasVendasCache.slice(inicio, fim);
+
+        document.getElementById('btn-prev').disabled = paginaAtual === 0;
+        document.getElementById('btn-next').disabled = fim >= todasVendasCache.length;
+        document.getElementById('pag-atual').innerText = paginaAtual + 1;
+
+        let html = `<table><thead><tr><th>Data</th><th>Produto</th><th>Qtd</th><th>Total</th><th>Ação</th></tr></thead><tbody>`;
+        if (itensPagina.length === 0) {
+            html += `<tr><td colspan="5" style="text-align:center">Nenhuma venda encontrada.</td></tr>`;
+        }
+        itensPagina.forEach(v => {
+            const total = v.precoUn * v.qtd;
+            const dataFormatada = v.data ? v.data.split('-').reverse().join('/') : '---';
+            html += `<tr>
+                <td>${dataFormatada}</td>
+                <td>${v.prodNome}</td>
+                <td>${v.qtd}</td>
+                <td>${fmt(total)}</td>
+                <td><button class="btn-del" onclick="window.removerItem('vendas','${v.id}')">✖</button></td>
+            </tr>`;
+        });
+        document.getElementById('listagem-vendas-recente').innerHTML = html + `</tbody></table>`;
+    }
+
+    window.carregarRelatorio = async (agrupar) => {
         const ini = document.getElementById('r-ini').value;
         const fim = document.getElementById('r-fim').value;
         const q = query(collection(db, "vendas"), orderBy("data", "desc"));
         const snap = await getDocs(q);
         
         let rec = 0, cus = 0;
-        let html = `<table><thead><tr><th>Data</th><th>Produto</th><th>Total</th><th>Lucro</th></tr></thead><tbody>`;
+        let html = "";
 
-        snap.forEach(doc => {
-            const v = doc.data();
-            if((ini && v.data < ini) || (fim && v.data > fim)) return;
+        if (agrupar) {
+            let dadosProd = {};
+            snap.forEach(doc => {
+                const v = doc.data();
+                if((ini && v.data < ini) || (fim && v.data > fim)) return;
 
-            const tRec = v.precoUn * v.qtd;
-            const tCus = v.custoUn * v.qtd;
-            const tLuc = tRec - tCus;
-            rec += tRec; cus += tCus;
+                const tRec = v.precoUn * v.qtd;
+                const tCus = v.custoUn * v.qtd;
+                rec += tRec; cus += tCus;
 
-            html += `<tr>
-                <td>${v.data.split('-').reverse().join('/')}</td>
-                <td>${v.prodNome} (${v.qtd}x)</td>
-                <td>${fmt(tRec)}</td>
-                <td style="color:${tLuc < 0 ? 'var(--delete)' : 'var(--success)'}">${fmt(tLuc)}</td>
-            </tr>`;
-        });
+                if(!dadosProd[v.prodNome]) dadosProd[v.prodNome] = { qtd: 0, rec: 0, luc: 0 };
+                dadosProd[v.prodNome].qtd += v.qtd;
+                dadosProd[v.prodNome].rec += tRec;
+                dadosProd[v.prodNome].luc += (tRec - tCus);
+            });
+
+            html = `<table><thead><tr><th>Produto</th><th>Qtd Vendida</th><th>Total Receita</th><th>Lucro</th></tr></thead><tbody>`;
+            for (let p in dadosProd) {
+                const d = dadosProd[p];
+                html += `<tr>
+                    <td>${p}</td>
+                    <td>${d.qtd}</td>
+                    <td>${fmt(d.rec)}</td>
+                    <td style="color:${d.luc < 0 ? 'var(--delete)' : 'var(--success)'}">${fmt(d.luc)}</td>
+                </tr>`;
+            }
+        } else {
+            html = `<table><thead><tr><th>Data</th><th>Produto</th><th>Total</th><th>Lucro</th></tr></thead><tbody>`;
+            snap.forEach(doc => {
+                const v = doc.data();
+                if((ini && v.data < ini) || (fim && v.data > fim)) return;
+
+                const tRec = v.precoUn * v.qtd;
+                const tCus = v.custoUn * v.qtd;
+                const tLuc = tRec - tCus;
+                rec += tRec; cus += tCus;
+
+                html += `<tr>
+                    <td>${v.data.split('-').reverse().join('/')}</td>
+                    <td>${v.prodNome} (${v.qtd}x)</td>
+                    <td>${fmt(tRec)}</td>
+                    <td style="color:${tLuc < 0 ? 'var(--delete)' : 'var(--success)'}">${fmt(tLuc)}</td>
+                </tr>`;
+            });
+        }
 
         document.getElementById('res-rec').innerText = fmt(rec);
         document.getElementById('res-cus').innerText = fmt(cus);
