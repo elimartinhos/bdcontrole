@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Breve Deleite - Controle</title>
     <link rel="icon" href="favicao.png" type="image/png">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { 
             --primary: #FBBF24; --success: #4ADE80; --bg: #823B28; 
@@ -15,27 +14,23 @@
         body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; background: var(--bg); color: var(--text); }
         .container { max-width: 900px; margin: auto; background: var(--surface); padding: 25px; border-radius: 12px; box-shadow: 0 10px 20px -5px rgba(0,0,0,0.4); }
         .header-logo { text-align: center; margin-bottom: 25px; }
-        .header-logo img { width: 250px; height: auto; display: block; margin: 0 auto; aspect-ratio: 1033 / 537; object-fit: contain; }
-        .header-logo h2 { margin: 10px 0 0; font-size: 16px; letter-spacing: 4px; color: var(--text); opacity: 0.9; font-weight: bold; }
+        .header-logo img { width: 250px; height: auto; display: block; margin: 0 auto; }
+        .header-logo h2 { margin: 10px 0 0; font-size: 16px; letter-spacing: 4px; font-weight: bold; }
         .tabs { display: flex; gap: 8px; margin-bottom: 25px; border-bottom: 2px solid var(--border); padding-bottom: 10px; overflow-x: auto; }
-        .tab { padding: 10px 18px; cursor: pointer; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; font-weight: 600; white-space: nowrap; transition: 0.2s; color: var(--text); }
-        .tab.active { background: var(--primary); color: var(--bg); border-color: var(--primary); }
+        .tab { padding: 10px 18px; cursor: pointer; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; font-weight: 600; color: var(--text); }
+        .tab.active { background: var(--primary); color: var(--bg); }
         .section { display: none; }
         .section.active { display: block; }
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 20px; background: rgba(0,0,0,0.15); padding: 15px; border-radius: 8px; border: 1px solid var(--border); }
         .form-group { display: flex; flex-direction: column; gap: 4px; }
-        label { font-size: 12px; font-weight: bold; color: rgba(255, 240, 201, 0.7); }
-        input, select { padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 15px; background: var(--bg); color: var(--text); color-scheme: dark; }
-        button.btn-action { background: var(--success); color: var(--bg); border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.2s; text-transform: uppercase; }
-        .table-container { overflow-x: auto; margin-top: 10px; margin-bottom: 30px; }
-        table { width: 100%; border-collapse: collapse; background: var(--surface); }
+        label { font-size: 12px; font-weight: bold; opacity: 0.7; }
+        input, select { padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); }
+        .btn-action { background: var(--success); color: var(--bg); border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; text-transform: uppercase; }
+        .table-container { overflow-x: auto; margin-top: 15px; }
+        table { width: 100%; border-collapse: collapse; }
         th, td { padding: 12px; border-bottom: 1px solid var(--border); text-align: left; font-size: 14px; }
-        th { background: rgba(0,0,0,0.2); color: var(--text); }
-        .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 20px 0; }
-        .card { padding: 15px; background: var(--bg); border-radius: 8px; text-align: center; border: 1px solid var(--border); }
-        .card h3 { margin: 0; font-size: 11px; color: rgba(255, 240, 201, 0.7); text-transform: uppercase; }
-        .card p { margin: 5px 0 0; font-size: 18px; font-weight: bold; }
         .btn-del { color: var(--delete); background: none; border: none; cursor: pointer; font-size: 16px; }
+        .btn-check { background: var(--edit); color: white; margin-bottom: 10px; padding: 8px; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -50,7 +45,6 @@
     </div>
 
     <div id="produtos" class="section active">
-        <h3>Cadastrar Produto</h3>
         <form id="form-produto" class="form-grid">
             <div class="form-group"><label>Nome</label><input type="text" id="p-nome" required></div>
             <div class="form-group"><label>Custo (R$)</label><input type="number" id="p-custo" step="0.01" required></div>
@@ -61,7 +55,6 @@
     </div>
 
     <div id="vendas" class="section">
-        <h3>Lançar Venda</h3>
         <form id="form-venda" class="form-grid">
             <div class="form-group"><label>Data</label><input type="date" id="v-data" required></div>
             <div class="form-group"><label>Produto</label><select id="v-prod" onchange="setPrecoSugerido()" required></select></div>
@@ -69,19 +62,19 @@
             <div class="form-group"><label>Preço Venda (R$)</label><input type="number" id="v-preco" step="0.01" required></div>
             <div class="form-group"><label>&nbsp;</label><button type="submit" class="btn-action">Confirmar Venda</button></div>
         </form>
-        <h3>Vendas Recentes</h3>
         <div id="listagem-vendas-recente" class="table-container"></div>
     </div>
 
     <div id="descarte" class="section">
-        <h3 style="color:var(--delete)">Registrar Descarte (Perda)</h3>
+        <h3 style="color:var(--delete)">Registrar Perda</h3>
         <form id="form-descarte" class="form-grid">
             <div class="form-group"><label>Data</label><input type="date" id="d-data" required></div>
             <div class="form-group"><label>Produto</label><select id="d-prod" required></select></div>
             <div class="form-group"><label>Qtd</label><input type="number" id="d-qtd" min="1" value="1" required></div>
-            <div class="form-group"><label>&nbsp;</label><button type="submit" class="btn-action" style="background:var(--waste); color:white">Lançar Perda</button></div>
+            <div class="form-group"><label>&nbsp;</label><button type="submit" class="btn-action" style="background:var(--waste); color:white">Lançar Descarte</button></div>
         </form>
-        <h3>Histórico de Descartes</h3>
+        
+        <button class="btn-check" onclick="window.atualizarListaDescarte()">🔎 CARREGAR HISTÓRICO</button>
         <div id="listagem-descartes-recente" class="table-container"></div>
     </div>
 
@@ -89,13 +82,7 @@
         <div class="form-grid">
             <div class="form-group"><label>Início</label><input type="date" id="r-ini"></div>
             <div class="form-group"><label>Fim</label><input type="date" id="r-fim"></div>
-            <div class="form-group"><label>&nbsp;</label><button onclick="carregarRelatorio(false)" class="btn-action">Por Venda</button></div>
-            <div class="form-group"><label>&nbsp;</label><button onclick="carregarRelatorio(true)" class="btn-action" style="background:var(--edit)">Por Produto</button></div>
-        </div>
-        <div class="summary-cards">
-            <div class="card"><h3>Receita</h3><p id="res-rec">R$ 0,00</p></div>
-            <div class="card"><h3>Custo Total</h3><p id="res-cus">R$ 0,00</p></div>
-            <div class="card" style="border-top:4px solid var(--success)"><h3>Lucro Líquido</h3><p id="res-luc">R$ 0,00</p></div>
+            <div class="form-group"><label>&nbsp;</label><button onclick="carregarRelatorio(false)" class="btn-action">Ver Vendas</button></div>
         </div>
         <div id="listagem-vendas" class="table-container"></div>
     </div>
@@ -119,35 +106,42 @@
         if(id === 'vendas' || id === 'descarte') popularSelects();
     };
 
-    // PRODUTOS
     onSnapshot(collection(db, "produtos"), (snap) => {
         cacheProdutos = snap.docs.map(d => ({id: d.id, ...d.data()}));
-        let html = `<table><thead><tr><th>Produto</th><th>Preço</th><th>Ação</th></tr></thead><tbody>`;
-        cacheProdutos.forEach(p => html += `<tr><td>${p.nome}</td><td>${fmt(p.preco)}</td><td><button class="btn-del" onclick="window.removerItem('produtos','${p.id}')">✖</button></td></tr>`);
-        document.getElementById('listagem-produtos').innerHTML = html + `</tbody></table>`;
+        let h = `<table><thead><tr><th>Produto</th><th>Preço</th><th>Ação</th></tr></thead><tbody>`;
+        cacheProdutos.forEach(p => h += `<tr><td>${p.nome}</td><td>${fmt(p.preco)}</td><td><button class="btn-del" onclick="window.removerItem('produtos','${p.id}')">✖</button></td></tr>`);
+        document.getElementById('listagem-produtos').innerHTML = h + `</tbody></table>`;
     });
 
-    // A LÓGICA DE OURO: ESCUTA TUDO E SEPARA NO FRONT-END
-    onSnapshot(query(collection(db, "vendas"), orderBy("timestamp", "desc"), limit(50)), (snap) => {
-        let rowsVendas = "", rowsDescartes = "";
-        let temVenda = false, temDescarte = false;
-
-        snap.forEach(d => {
-            const v = d.data();
-            const dataF = v.data.split('-').reverse().slice(0,2).join('/');
-            
-            // Se o nome contiver [DESCARTE], vai pra tabela de descarte
-            if (v.prodNome.includes("[DESCARTE]")) {
-                temDescarte = true;
-                rowsDescartes += `<tr><td>${dataF}</td><td>${v.prodNome.replace("[DESCARTE] ", "")}</td><td>${fmt(v.custoUn * v.qtd)}</td><td><button class="btn-del" onclick="window.removerItem('vendas','${d.id}')">✖</button></td></tr>`;
-            } else {
-                temVenda = true;
-                rowsVendas += `<tr><td>${dataF}</td><td>${v.prodNome}</td><td>${fmt(v.precoUn * v.qtd)}</td><td><button class="btn-del" onclick="window.removerItem('vendas','${d.id}')">✖</button></td></tr>`;
+    // FUNÇÃO QUE VOCÊ VAI CLICAR NO BOTÃO PARA TESTAR
+    window.atualizarListaDescarte = async () => {
+        const snap = await getDocs(query(collection(db, "vendas"), orderBy("timestamp", "desc"), limit(100)));
+        let h = `<table><thead><tr><th>Data</th><th>Produto</th><th>Custo Perda</th><th>Ação</th></tr></thead><tbody>`;
+        let tem = false;
+        snap.forEach(docSnap => {
+            const v = docSnap.data();
+            // Verifica se é descarte pelo nome ou pelo preço zero
+            if (String(v.prodNome).includes("[DESCARTE]") || v.precoUn === 0) {
+                tem = true;
+                const d = v.data.split('-').reverse().slice(0,2).join('/');
+                h += `<tr><td>${d}</td><td>${v.prodNome.replace("[DESCARTE] ", "")}</td><td>${fmt(v.custoUn * v.qtd)}</td><td><button class="btn-del" onclick="window.removerDescarte('${docSnap.id}')">✖</button></td></tr>`;
             }
         });
+        document.getElementById('listagem-descartes-recente').innerHTML = tem ? h + "</tbody></table>" : "<p>Nenhum descarte</p>";
+    };
 
-        document.getElementById('listagem-vendas-recente').innerHTML = temVenda ? `<table><thead><tr><th>Data</th><th>Produto</th><th>Total</th><th>Ação</th></tr></thead><tbody>${rowsVendas}</tbody></table>` : "<p style='padding:10px;opacity:0.6'>Nenhuma venda recente.</p>";
-        document.getElementById('listagem-descartes-recente').innerHTML = temDescarte ? `<table><thead><tr><th>Data</th><th>Produto</th><th>Perda</th><th>Ação</th></tr></thead><tbody>${rowsDescartes}</tbody></table>` : "<p style='padding:10px;opacity:0.6'>Nenhum descarte</p>";
+    // Vendas Recentes (Automático)
+    onSnapshot(query(collection(db, "vendas"), orderBy("timestamp", "desc"), limit(30)), (snap) => {
+        let h = `<table><thead><tr><th>Data</th><th>Produto</th><th>Total</th><th>Ação</th></tr></thead><tbody>`;
+        let tem = false;
+        snap.forEach(d => {
+            const v = d.data();
+            if (!String(v.prodNome).includes("[DESCARTE]") && v.precoUn > 0) {
+                tem = true;
+                h += `<tr><td>${v.data.split('-').reverse().slice(0,2).join('/')}</td><td>${v.prodNome}</td><td>${fmt(v.precoUn * v.qtd)}</td><td><button class="btn-del" onclick="window.removerItem('vendas','${d.id}')">✖</button></td></tr>`;
+            }
+        });
+        document.getElementById('listagem-vendas-recente').innerHTML = tem ? h + "</tbody></table>" : "<p>Nenhuma venda recente.</p>";
     });
 
     function popularSelects() {
@@ -173,47 +167,20 @@
         e.preventDefault();
         const p = cacheProdutos.find(x => x.id === document.getElementById('v-prod').value);
         await addDoc(collection(db, "vendas"), { data: document.getElementById('v-data').value, prodNome: p.nome, custoUn: p.custo, precoUn: parseFloat(document.getElementById('v-preco').value), qtd: parseInt(document.getElementById('v-qtd').value), timestamp: new Date().getTime() });
-        e.target.reset(); popularSelects();
+        e.target.reset();
     };
 
     document.getElementById('form-descarte').onsubmit = async (e) => {
         e.preventDefault();
         const p = cacheProdutos.find(x => x.id === document.getElementById('d-prod').value);
         await addDoc(collection(db, "vendas"), { data: document.getElementById('d-data').value, prodNome: "[DESCARTE] " + p.nome, custoUn: p.custo, precoUn: 0, qtd: parseInt(document.getElementById('d-qtd').value), timestamp: new Date().getTime() });
-        e.target.reset(); popularSelects();
+        e.target.reset();
+        window.atualizarListaDescarte(); // Atualiza na hora
     };
 
-    window.carregarRelatorio = async (agrupar) => {
-        const ini = document.getElementById('r-ini').value, fim = document.getElementById('r-fim').value;
-        const snap = await getDocs(query(collection(db, "vendas"), orderBy("data", "desc")));
-        let rec = 0, cus = 0, dadosA = {};
-        let html = `<table><thead><tr><th>${agrupar ? 'Produto' : 'Data'}</th><th>${agrupar ? 'Qtd' : 'Produto'}</th><th>Total</th><th>Lucro</th></tr></thead><tbody>`;
-        snap.forEach(d => {
-            const v = d.data();
-            if((ini && v.data < ini) || (fim && v.data > fim)) return;
-            const tR = v.precoUn * v.qtd, tC = v.custoUn * v.qtd, tL = tR - tC;
-            rec += tR; cus += tC;
-            if(agrupar) {
-                if(!dadosA[v.prodNome]) dadosA[v.prodNome] = { tr:0, tc:0, q:0 };
-                dadosA[v.prodNome].tr += tR; dadosA[v.prodNome].tc += tC; dadosA[v.prodNome].q += v.qtd;
-            } else {
-                html += `<tr><td>${v.data.split('-').reverse().join('/')}</td><td>${v.prodNome}</td><td>${fmt(tR)}</td><td style="color:${tL < 0 ? '#ff8a8a' : '#4ADE80'}">${fmt(tL)}</td></tr>`;
-            }
-        });
-        if(agrupar) {
-            Object.keys(dadosA).forEach(n => {
-                const d = dadosA[n]; const l = d.tr - d.tc;
-                html += `<tr><td>${n}</td><td>${d.q}x</td><td>${fmt(d.tr)}</td><td style="color:${l < 0 ? '#ff8a8a' : '#4ADE80'}">${fmt(l)}</td></tr>`;
-            });
-        }
-        document.getElementById('res-rec').innerText = fmt(rec);
-        document.getElementById('res-cus').innerText = fmt(cus);
-        document.getElementById('res-luc').innerText = fmt(rec-cus);
-        document.getElementById('listagem-vendas').innerHTML = html + "</tbody></table>";
-    };
-
-    window.removerItem = async (c, id) => { if(confirm("Excluir registro?")) await deleteDoc(doc(db, c, id)); };
-    window.onload = () => popularSelects();
+    window.removerItem = async (c, id) => { if(confirm("Excluir?")) await deleteDoc(doc(db, c, id)); };
+    window.removerDescarte = async (id) => { if(confirm("Excluir descarte?")) { await deleteDoc(doc(db, 'vendas', id)); window.atualizarListaDescarte(); } };
+    window.onload = () => { popularSelects(); };
 </script>
 </body>
 </html>
