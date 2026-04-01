@@ -10,7 +10,7 @@
         :root { 
             --primary: #FBBF24; --success: #4ADE80; --bg: #823B28; 
             --surface: #9B4630; --text: #FFF0C9; --border: #6B291A; 
-            --edit: #38BDF8; --delete: #FCA5A5;
+            --edit: #38BDF8; --delete: #FCA5A5; --waste: #ef4444;
         }
         body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; background: var(--bg); color: var(--text); }
         .container { max-width: 900px; margin: auto; background: var(--surface); padding: 25px; border-radius: 12px; box-shadow: 0 10px 20px -5px rgba(0,0,0,0.4); }
@@ -54,6 +54,7 @@
     <div class="tabs">
         <button class="tab active" onclick="showTab('produtos', this)">📦 Produtos</button>
         <button class="tab" onclick="showTab('vendas', this)">🛒 Vender</button>
+        <button class="tab" onclick="showTab('descarte', this)">🗑️ Descarte</button>
         <button class="tab" onclick="showTab('relatorios', this)">📊 Relatórios</button>
     </div>
 
@@ -81,6 +82,17 @@
         <div id="listagem-vendas-recente" class="table-container"></div>
     </div>
 
+    <div id="descarte" class="section">
+        <h3 style="color:var(--delete)">Registrar Descarte (Perda)</h3>
+        <p style="font-size: 13px; opacity: 0.8;">O custo será puxado automaticamente e o preço de venda será zero.</p>
+        <form id="form-descarte" class="form-grid">
+            <div class="form-group"><label>Data</label><input type="date" id="d-data" required></div>
+            <div class="form-group"><label>Produto Vencido</label><select id="d-prod" required></select></div>
+            <div class="form-group"><label>Qtd Descartada</label><input type="number" id="d-qtd" min="1" value="1" required></div>
+            <div class="form-group"><label>&nbsp;</label><button type="submit" class="btn-action" style="background:var(--waste); color:white">Lançar Perda</button></div>
+        </form>
+    </div>
+
     <div id="relatorios" class="section">
         <div class="form-grid">
             <div class="form-group"><label>Início</label><input type="date" id="r-ini"></div>
@@ -93,7 +105,7 @@
         <div class="summary-cards">
             <div class="card"><h3>Receita</h3><p id="res-rec">R$ 0,00</p></div>
             <div class="card"><h3>Custo Total</h3><p id="res-cus">R$ 0,00</p></div>
-            <div class="card" style="border-top:4px solid var(--success)"><h3>Lucro</h3><p id="res-luc">R$ 0,00</p></div>
+            <div class="card" style="border-top:4px solid var(--success)"><h3>Lucro Líquido</h3><p id="res-luc">R$ 0,00</p></div>
         </div>
 
         <div id="pico-chart-wrapper" class="chart-container"><canvas id="picoChart"></canvas></div>
@@ -116,7 +128,7 @@
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         btn.classList.add('active');
-        if(id === 'vendas') popularSelect();
+        if(id === 'vendas' || id === 'descarte') popularSelects();
     };
 
     onSnapshot(collection(db, "produtos"), (snap) => {
@@ -126,11 +138,14 @@
         document.getElementById('listagem-produtos').innerHTML = html + `</tbody></table>`;
     });
 
-    function popularSelect() {
-        const sel = document.getElementById('v-prod');
-        sel.innerHTML = '<option value="">Selecione...</option>';
-        cacheProdutos.forEach(p => sel.innerHTML += `<option value="${p.id}">${p.nome}</option>`);
+    function popularSelects() {
+        const vSel = document.getElementById('v-prod');
+        const dSel = document.getElementById('d-prod');
+        const options = '<option value="">Selecione...</option>' + cacheProdutos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+        vSel.innerHTML = options;
+        dSel.innerHTML = options;
         document.getElementById('v-data').valueAsDate = new Date();
+        document.getElementById('d-data').valueAsDate = new Date();
     }
 
     window.setPrecoSugerido = () => {
@@ -138,6 +153,7 @@
         if(p) document.getElementById('v-preco').value = p.preco;
     };
 
+    // LANÇAR VENDA
     document.getElementById('form-venda').onsubmit = async (e) => {
         e.preventDefault();
         const p = cacheProdutos.find(x => x.id === document.getElementById('v-prod').value);
@@ -148,10 +164,27 @@
             qtd: parseInt(document.getElementById('v-qtd').value),
             timestamp: new Date().getTime()
         });
-        e.target.reset(); popularSelect();
+        e.target.reset(); popularSelects();
+        alert("Venda registrada!");
     };
 
-    // RELATÓRIOS (Venda e Produto)
+    // LANÇAR DESCARTE (Preço de venda sempre 0)
+    document.getElementById('form-descarte').onsubmit = async (e) => {
+        e.preventDefault();
+        const p = cacheProdutos.find(x => x.id === document.getElementById('d-prod').value);
+        await addDoc(collection(db, "vendas"), {
+            data: document.getElementById('d-data').value,
+            prodNome: "[DESCARTE] " + p.nome, 
+            custoUn: p.custo,
+            precoUn: 0, // Preço zero gera lucro negativo (perda do custo)
+            qtd: parseInt(document.getElementById('d-qtd').value),
+            timestamp: new Date().getTime()
+        });
+        e.target.reset(); popularSelects();
+        alert("Descarte registrado como perda.");
+    };
+
+    // RELATÓRIOS
     window.carregarRelatorio = async (agrupar) => {
         document.getElementById('pico-chart-wrapper').style.display = 'none';
         const ini = document.getElementById('r-ini').value, fim = document.getElementById('r-fim').value;
@@ -164,6 +197,7 @@
             const v = doc.data();
             if((ini && v.data < ini) || (fim && v.data > fim)) return;
             const tRec = v.precoUn * v.qtd, tCus = v.custoUn * v.qtd;
+            const tLuc = tRec - tCus;
             rec += tRec; cus += tCus;
 
             if(agrupar) {
@@ -172,14 +206,20 @@
                 dadosAgrupados[v.prodNome].tc += tCus;
                 dadosAgrupados[v.prodNome].q += v.qtd;
             } else {
-                html += `<tr><td>${v.data.split('-').reverse().join('/')}</td><td>${v.prodNome} (${v.qtd}x)</td><td>${fmt(tRec)}</td><td>${fmt(tRec-tCus)}</td></tr>`;
+                html += `<tr>
+                    <td>${v.data.split('-').reverse().join('/')}</td>
+                    <td>${v.prodNome} (${v.qtd}x)</td>
+                    <td>${fmt(tRec)}</td>
+                    <td style="color:${tLuc < 0 ? '#ff8a8a' : '#4ADE80'}">${fmt(tLuc)}</td>
+                </tr>`;
             }
         });
 
         if(agrupar) {
             Object.keys(dadosAgrupados).forEach(nome => {
                 const d = dadosAgrupados[nome];
-                html += `<tr><td>${nome}</td><td>${d.q}x</td><td>${fmt(d.tr)}</td><td>${fmt(d.tr-d.tc)}</td></tr>`;
+                const luc = d.tr - d.tc;
+                html += `<tr><td>${nome}</td><td>${d.q}x</td><td>${fmt(d.tr)}</td><td style="color:${luc < 0 ? '#ff8a8a' : '#4ADE80'}">${fmt(luc)}</td></tr>`;
             });
         }
 
@@ -189,7 +229,6 @@
         document.getElementById('listagem-vendas').innerHTML = html + "</tbody></table>";
     };
 
-    // RELATÓRIO PICO
     window.carregarRelatorioPico = async () => {
         document.getElementById('pico-chart-wrapper').style.display = 'block';
         const ini = document.getElementById('r-ini').value, fim = document.getElementById('r-fim').value;
@@ -209,7 +248,7 @@
         if(meuGrafico) meuGrafico.destroy();
         meuGrafico = new Chart(document.getElementById('picoChart'), {
             type: 'bar',
-            data: { labels: dias, datasets: [{ label: 'Faturamento', data: valores, backgroundColor: '#FBBF24' }] },
+            data: { labels: dias, datasets: [{ label: 'Receita', data: valores, backgroundColor: '#FBBF24' }] },
             options: { scales: { y: { beginAtZero: true, ticks: { color: '#FFF0C9' } }, x: { ticks: { color: '#FFF0C9' } } } }
         });
         document.getElementById('res-rec').innerText = fmt(total);
