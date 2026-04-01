@@ -133,7 +133,6 @@
         if(id === 'vendas' || id === 'descarte') popularSelects();
     };
 
-    // Produtos
     onSnapshot(collection(db, "produtos"), (snap) => {
         cacheProdutos = snap.docs.map(d => ({id: d.id, ...d.data()}));
         let html = `<table><thead><tr><th>Produto</th><th>Preço</th><th>Ação</th></tr></thead><tbody>`;
@@ -141,29 +140,27 @@
         document.getElementById('listagem-produtos').innerHTML = html + `</tbody></table>`;
     });
 
-    // LISTAGENS EM TEMPO REAL (Vendas e Descartes)
-    onSnapshot(query(collection(db, "vendas"), orderBy("timestamp", "desc"), limit(30)), (snap) => {
-        let htmlV = `<table><thead><tr><th>Data</th><th>Produto</th><th>Total</th><th>Ação</th></tr></thead><tbody>`;
-        let htmlD = `<table><thead><tr><th>Data</th><th>Produto</th><th>Custo Perda</th><th>Ação</th></tr></thead><tbody>`;
+    // ESCUTA ÚNICA PARA TODAS AS VENDAS/DESCARTES (Sincronizado)
+    onSnapshot(query(collection(db, "vendas"), orderBy("timestamp", "desc"), limit(40)), (snap) => {
+        let rowsV = "", rowsD = "";
         let hasV = false, hasD = false;
 
-        snap.forEach(d => {
-            const v = d.data();
+        snap.forEach(docSnap => {
+            const v = docSnap.data();
             const dataF = v.data.split('-').reverse().slice(0,2).join('/');
             
-            // Verificação Robusta: Se o nome contém [DESCARTE] ou se o preço de venda é zero
+            // Lógica de separação forçada
             if (v.prodNome.includes("[DESCARTE]") || v.precoUn === 0) {
                 hasD = true;
-                const nomeLimpo = v.prodNome.replace("[DESCARTE] ", "");
-                htmlD += `<tr><td>${dataF}</td><td>${nomeLimpo}</td><td>${fmt(v.custoUn * v.qtd)}</td><td><button class="btn-del" onclick="window.removerItem('vendas','${d.id}')">✖</button></td></tr>`;
+                rowsD += `<tr><td>${dataF}</td><td>${v.prodNome.replace("[DESCARTE] ", "")}</td><td>${fmt(v.custoUn * v.qtd)}</td><td><button class="btn-del" onclick="window.removerItem('vendas','${docSnap.id}')">✖</button></td></tr>`;
             } else {
                 hasV = true;
-                htmlV += `<tr><td>${dataF}</td><td>${v.prodNome}</td><td>${fmt(v.precoUn * v.qtd)}</td><td><button class="btn-del" onclick="window.removerItem('vendas','${d.id}')">✖</button></td></tr>`;
+                rowsV += `<tr><td>${dataF}</td><td>${v.prodNome}</td><td>${fmt(v.precoUn * v.qtd)}</td><td><button class="btn-del" onclick="window.removerItem('vendas','${docSnap.id}')">✖</button></td></tr>`;
             }
         });
 
-        document.getElementById('listagem-vendas-recente').innerHTML = hasV ? htmlV + "</tbody></table>" : "<p style='padding:10px;opacity:0.6'>Nenhuma venda recente.</p>";
-        document.getElementById('listagem-descartes-recente').innerHTML = hasD ? htmlD + "</tbody></table>" : "<p style='padding:10px;opacity:0.6'>Nenhum descarte recente.</p>";
+        document.getElementById('listagem-vendas-recente').innerHTML = hasV ? `<table><thead><tr><th>Data</th><th>Produto</th><th>Total</th><th>Ação</th></tr></thead><tbody>${rowsV}</tbody></table>` : "<p style='padding:10px;opacity:0.6'>Nenhuma venda recente.</p>";
+        document.getElementById('listagem-descartes-recente').innerHTML = hasD ? `<table><thead><tr><th>Data</th><th>Produto</th><th>Custo Perda</th><th>Ação</th></tr></thead><tbody>${rowsD}</tbody></table>` : "<p style='padding:10px;opacity:0.6'>Nenhum descarte</p>";
     });
 
     function popularSelects() {
@@ -194,10 +191,8 @@
         const p = cacheProdutos.find(x => x.id === document.getElementById('v-prod').value);
         await addDoc(collection(db, "vendas"), {
             data: document.getElementById('v-data').value,
-            prodNome: p.nome, custoUn: p.custo,
-            precoUn: parseFloat(document.getElementById('v-preco').value),
-            qtd: parseInt(document.getElementById('v-qtd').value),
-            timestamp: new Date().getTime()
+            prodNome: p.nome, custoUn: p.custo, precoUn: parseFloat(document.getElementById('v-preco').value),
+            qtd: parseInt(document.getElementById('v-qtd').value), timestamp: new Date().getTime()
         });
         e.target.reset(); popularSelects();
     };
@@ -208,11 +203,9 @@
         await addDoc(collection(db, "vendas"), {
             data: document.getElementById('d-data').value,
             prodNome: "[DESCARTE] " + p.nome, custoUn: p.custo, precoUn: 0,
-            qtd: parseInt(document.getElementById('d-qtd').value),
-            timestamp: new Date().getTime()
+            qtd: parseInt(document.getElementById('d-qtd').value), timestamp: new Date().getTime()
         });
         e.target.reset(); popularSelects();
-        alert("Descarte registrado!");
     };
 
     window.carregarRelatorio = async (agrupar) => {
