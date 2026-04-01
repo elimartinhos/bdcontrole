@@ -25,7 +25,7 @@
         .section { display: none; }
         .section.active { display: block; }
         
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; background: rgba(0,0,0,0.15); padding: 15px; border-radius: 8px; border: 1px solid var(--border); }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 20px; background: rgba(0,0,0,0.15); padding: 15px; border-radius: 8px; border: 1px solid var(--border); }
         .form-group { display: flex; flex-direction: column; gap: 4px; }
         label { font-size: 12px; font-weight: bold; color: rgba(255, 240, 201, 0.7); }
         input, select { padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 15px; background: var(--bg); color: var(--text); color-scheme: dark; }
@@ -37,7 +37,7 @@
         th, td { padding: 12px; border-bottom: 1px solid var(--border); text-align: left; font-size: 14px; }
         th { background: rgba(0,0,0,0.2); color: var(--text); }
         
-        .chart-container { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin-top: 20px; display: none; }
+        .chart-container { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin: 20px 0; display: none; }
 
         .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 20px 0; }
         .card { padding: 15px; background: var(--bg); border-radius: 8px; text-align: center; border: 1px solid var(--border); }
@@ -76,7 +76,7 @@
             <div class="form-group"><label>Produto</label><select id="v-prod" onchange="setPrecoSugerido()" required></select></div>
             <div class="form-group"><label>Qtd</label><input type="number" id="v-qtd" min="1" value="1" required></div>
             <div class="form-group"><label>Preço Venda (R$)</label><input type="number" id="v-preco" step="0.01" required></div>
-            <div class="form-group"><label>&nbsp;</label><button type="submit" class="btn-action">Confirmar Venda</button></div>
+            <div class="form-group"><label>&nbsp;</label><button type="submit" class="btn-action">Confirmar</button></div>
         </form>
         <div id="listagem-vendas-recente" class="table-container"></div>
     </div>
@@ -86,6 +86,7 @@
             <div class="form-group"><label>Início</label><input type="date" id="r-ini"></div>
             <div class="form-group"><label>Fim</label><input type="date" id="r-fim"></div>
             <div class="form-group"><label>&nbsp;</label><button onclick="carregarRelatorio(false)" class="btn-action">Por Venda</button></div>
+            <div class="form-group"><label>&nbsp;</label><button onclick="carregarRelatorio(true)" class="btn-action" style="background:var(--edit)">Por Produto</button></div>
             <div class="form-group"><label>&nbsp;</label><button onclick="carregarRelatorioPico()" class="btn-action" style="background:var(--primary); color:var(--bg)">Pico por Dia</button></div>
         </div>
 
@@ -95,10 +96,7 @@
             <div class="card" style="border-top:4px solid var(--success)"><h3>Lucro</h3><p id="res-luc">R$ 0,00</p></div>
         </div>
 
-        <div id="pico-chart-wrapper" class="chart-container">
-            <canvas id="picoChart"></canvas>
-        </div>
-
+        <div id="pico-chart-wrapper" class="chart-container"><canvas id="picoChart"></canvas></div>
         <div id="listagem-vendas" class="table-container"></div>
     </div>
 </div>
@@ -107,21 +105,12 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, collection, addDoc, getDocs, query, orderBy, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    const firebaseConfig = { 
-        apiKey: "AIzaSyB861qyg_6svQUqrd069ZPAfPH6ZRWbBCs", 
-        authDomain: "breve-deleite.firebaseapp.com", 
-        projectId: "breve-deleite", 
-        storageBucket: "breve-deleite.firebasestorage.app", 
-        messagingSenderId: "271773334620", 
-        appId: "1:271773334620:web:3d50bdc91efda9aa8efa99" 
-    };
-
+    const firebaseConfig = { apiKey: "AIzaSyB861qyg_6svQUqrd069ZPAfPH6ZRWbBCs", authDomain: "breve-deleite.firebaseapp.com", projectId: "breve-deleite", storageBucket: "breve-deleite.firebasestorage.app", messagingSenderId: "271773334620", appId: "1:271773334620:web:3d50bdc91efda9aa8efa99" };
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     let cacheProdutos = [], meuGrafico = null;
     const fmt = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-    // Navegação de Tabs
     window.showTab = (id, btn) => {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -130,13 +119,10 @@
         if(id === 'vendas') popularSelect();
     };
 
-    // Monitorar Produtos
     onSnapshot(collection(db, "produtos"), (snap) => {
         cacheProdutos = snap.docs.map(d => ({id: d.id, ...d.data()}));
         let html = `<table><thead><tr><th>Produto</th><th>Preço</th><th>Ação</th></tr></thead><tbody>`;
-        cacheProdutos.forEach(p => {
-            html += `<tr><td>${p.nome}</td><td>${fmt(p.preco)}</td><td><button class="btn-del" onclick="window.removerItem('produtos','${p.id}')">✖</button></td></tr>`;
-        });
+        cacheProdutos.forEach(p => html += `<tr><td>${p.nome}</td><td>${fmt(p.preco)}</td><td><button class="btn-del" onclick="window.removerItem('produtos','${p.id}')">✖</button></td></tr>`);
         document.getElementById('listagem-produtos').innerHTML = html + `</tbody></table>`;
     });
 
@@ -152,7 +138,6 @@
         if(p) document.getElementById('v-preco').value = p.preco;
     };
 
-    // Salvar Venda
     document.getElementById('form-venda').onsubmit = async (e) => {
         e.preventDefault();
         const p = cacheProdutos.find(x => x.id === document.getElementById('v-prod').value);
@@ -166,87 +151,69 @@
         e.target.reset(); popularSelect();
     };
 
-    // Relatório de Pico por Dia da Semana
-    window.carregarRelatorioPico = async () => {
-        const ini = document.getElementById('r-ini').value;
-        const fim = document.getElementById('r-fim').value;
-        const snap = await getDocs(collection(db, "vendas"));
-        
-        const diasNome = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
-        const dadosPico = [0, 0, 0, 0, 0, 0, 0]; // Soma de R$
-        const qtdVendas = [0, 0, 0, 0, 0, 0, 0]; // Contagem de pedidos
-        
-        let totalGeral = 0;
-
-        snap.forEach(doc => {
-            const v = doc.data();
-            if((ini && v.data < ini) || (fim && v.data > fim)) return;
-            
-            // Corrige fuso horário da data para pegar o dia da semana certo
-            const dataObj = new Date(v.data + "T00:00:00");
-            const diaSemana = dataObj.getDay();
-            
-            const valorVenda = v.precoUn * v.qtd;
-            dadosPico[diaSemana] += valorVenda;
-            qtdVendas[diaSemana] += 1;
-            totalGeral += valorVenda;
-        });
-
-        // Exibe o container do gráfico
-        document.getElementById('pico-chart-wrapper').style.display = 'block';
-        
-        // Destrói gráfico anterior se existir
-        if(meuGrafico) meuGrafico.destroy();
-
-        const ctx = document.getElementById('picoChart').getContext('2d');
-        meuGrafico = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: diasNome,
-                datasets: [{
-                    label: 'Faturamento por Dia (R$)',
-                    data: dadosPico,
-                    backgroundColor: '#FBBF24',
-                    borderRadius: 5
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: { 
-                    y: { beginAtZero: true, grid: { color: '#6B291A' }, ticks: { color: '#FFF0C9' } },
-                    x: { ticks: { color: '#FFF0C9' } }
-                },
-                plugins: { legend: { display: false } }
-            }
-        });
-
-        // Mostra os dados em tabela logo abaixo
-        let htmlTable = `<h3>Dados por Dia</h3><table><thead><tr><th>Dia</th><th>Vendas</th><th>Total</th></tr></thead><tbody>`;
-        diasNome.forEach((dia, i) => {
-            htmlTable += `<tr><td>${dia}</td><td>${qtdVendas[i]}</td><td>${fmt(dadosPico[i])}</td></tr>`;
-        });
-        document.getElementById('listagem-vendas').innerHTML = htmlTable + "</tbody></table>";
-        document.getElementById('res-rec').innerText = fmt(totalGeral);
-    };
-
-    // Relatório Padrão (Por Venda)
-    window.carregarRelatorio = async () => {
+    // RELATÓRIOS (Venda e Produto)
+    window.carregarRelatorio = async (agrupar) => {
         document.getElementById('pico-chart-wrapper').style.display = 'none';
         const ini = document.getElementById('r-ini').value, fim = document.getElementById('r-fim').value;
         const snap = await getDocs(query(collection(db, "vendas"), orderBy("data", "desc")));
-        let rec = 0, cus = 0, html = "<table><thead><tr><th>Data</th><th>Produto</th><th>Total</th></tr></thead><tbody>";
         
+        let rec = 0, cus = 0, dadosAgrupados = {};
+        let html = `<table><thead><tr><th>${agrupar ? 'Produto' : 'Data'}</th><th>${agrupar ? 'Qtd' : 'Produto'}</th><th>Total</th><th>Lucro</th></tr></thead><tbody>`;
+
         snap.forEach(doc => {
             const v = doc.data();
             if((ini && v.data < ini) || (fim && v.data > fim)) return;
-            const tr = v.precoUn * v.qtd, tc = v.custoUn * v.qtd;
-            rec += tr; cus += tc;
-            html += `<tr><td>${v.data.split('-').reverse().join('/')}</td><td>${v.prodNome}</td><td>${fmt(tr)}</td></tr>`;
+            const tRec = v.precoUn * v.qtd, tCus = v.custoUn * v.qtd;
+            rec += tRec; cus += tCus;
+
+            if(agrupar) {
+                if(!dadosAgrupados[v.prodNome]) dadosAgrupados[v.prodNome] = { tr:0, tc:0, q:0 };
+                dadosAgrupados[v.prodNome].tr += tRec;
+                dadosAgrupados[v.prodNome].tc += tCus;
+                dadosAgrupados[v.prodNome].q += v.qtd;
+            } else {
+                html += `<tr><td>${v.data.split('-').reverse().join('/')}</td><td>${v.prodNome} (${v.qtd}x)</td><td>${fmt(tRec)}</td><td>${fmt(tRec-tCus)}</td></tr>`;
+            }
         });
+
+        if(agrupar) {
+            Object.keys(dadosAgrupados).forEach(nome => {
+                const d = dadosAgrupados[nome];
+                html += `<tr><td>${nome}</td><td>${d.q}x</td><td>${fmt(d.tr)}</td><td>${fmt(d.tr-d.tc)}</td></tr>`;
+            });
+        }
+
         document.getElementById('res-rec').innerText = fmt(rec);
         document.getElementById('res-cus').innerText = fmt(cus);
         document.getElementById('res-luc').innerText = fmt(rec-cus);
         document.getElementById('listagem-vendas').innerHTML = html + "</tbody></table>";
+    };
+
+    // RELATÓRIO PICO
+    window.carregarRelatorioPico = async () => {
+        document.getElementById('pico-chart-wrapper').style.display = 'block';
+        const ini = document.getElementById('r-ini').value, fim = document.getElementById('r-fim').value;
+        const snap = await getDocs(collection(db, "vendas"));
+        const dias = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+        const valores = [0,0,0,0,0,0,0];
+        let total = 0;
+
+        snap.forEach(doc => {
+            const v = doc.data();
+            if((ini && v.data < ini) || (fim && v.data > fim)) return;
+            const dia = new Date(v.data + "T00:00:00").getDay();
+            valores[dia] += (v.precoUn * v.qtd);
+            total += (v.precoUn * v.qtd);
+        });
+
+        if(meuGrafico) meuGrafico.destroy();
+        meuGrafico = new Chart(document.getElementById('picoChart'), {
+            type: 'bar',
+            data: { labels: dias, datasets: [{ label: 'Faturamento', data: valores, backgroundColor: '#FBBF24' }] },
+            options: { scales: { y: { beginAtZero: true, ticks: { color: '#FFF0C9' } }, x: { ticks: { color: '#FFF0C9' } } } }
+        });
+        document.getElementById('res-rec').innerText = fmt(total);
+        document.getElementById('listagem-vendas').innerHTML = "";
     };
 
     window.removerItem = async (c, id) => { if(confirm("Excluir?")) await deleteDoc(doc(db, c, id)); };
