@@ -53,7 +53,6 @@
     <div id="produtos" class="section active">
         <h3>Cadastrar Produto</h3>
         <form id="form-produto" class="form-grid">
-            <input type="hidden" id="p-id">
             <div class="form-group"><label>Nome</label><input type="text" id="p-nome" required></div>
             <div class="form-group"><label>Custo (R$)</label><input type="number" id="p-custo" step="0.01" required></div>
             <div class="form-group"><label>Preço Sugerido (R$)</label><input type="number" id="p-preco" step="0.01" required></div>
@@ -121,9 +120,9 @@
         document.getElementById(id).classList.add('active');
         btn.classList.add('active');
         if(id === 'vendas' || id === 'descarte') popularSelects();
+        if(id === 'descarte') window.carregarDescartesManualmente(); // CARREGA AO CLICAR
     };
 
-    // PRODUTOS
     onSnapshot(collection(db, "produtos"), (snap) => {
         cacheProdutos = snap.docs.map(d => ({id: d.id, ...d.data()}));
         let html = `<table><thead><tr><th>Produto</th><th>Preço</th><th>Ação</th></tr></thead><tbody>`;
@@ -131,8 +130,7 @@
         document.getElementById('listagem-produtos').innerHTML = html + `</tbody></table>`;
     });
 
-    // LISTAGEM VENDAS RECENTES (Apenas onde preço > 0)
-    onSnapshot(query(collection(db, "vendas"), where("precoUn", ">", 0), orderBy("precoUn"), orderBy("timestamp", "desc"), limit(20)), (snap) => {
+    onSnapshot(query(collection(db, "vendas"), where("precoUn", ">", 0), orderBy("precoUn"), orderBy("timestamp", "desc"), limit(15)), (snap) => {
         let html = `<table><thead><tr><th>Data</th><th>Produto</th><th>Total</th><th>Ação</th></tr></thead><tbody>`;
         let has = false;
         snap.forEach(d => {
@@ -142,16 +140,18 @@
         document.getElementById('listagem-vendas-recente').innerHTML = has ? html + "</tbody></table>" : "<p style='padding:10px;opacity:0.6'>Nenhuma venda recente.</p>";
     });
 
-    // LISTAGEM DESCARTES (Apenas onde preço == 0)
-    onSnapshot(query(collection(db, "vendas"), where("precoUn", "==", 0), orderBy("timestamp", "desc"), limit(20)), (snap) => {
+    // BUSCA MANUAL DE DESCARTES (CHAMADO NO CLIQUE DA ABA)
+    window.carregarDescartesManualmente = async () => {
+        const q = query(collection(db, "vendas"), where("precoUn", "==", 0), orderBy("timestamp", "desc"), limit(20));
+        const snap = await getDocs(q);
         let html = `<table><thead><tr><th>Data</th><th>Produto</th><th>Perda</th><th>Ação</th></tr></thead><tbody>`;
         let has = false;
         snap.forEach(d => {
             const v = d.data(); has = true;
-            html += `<tr><td>${v.data.split('-').reverse().slice(0,2).join('/')}</td><td>${v.prodNome.replace("[DESCARTE] ", "")}</td><td>${fmt(v.custoUn * v.qtd)}</td><td><button class="btn-del" onclick="window.removerItem('vendas','${d.id}')">✖</button></td></tr>`;
+            html += `<tr><td>${v.data.split('-').reverse().slice(0,2).join('/')}</td><td>${v.prodNome.replace("[DESCARTE] ", "")}</td><td>${fmt(v.custoUn * v.qtd)}</td><td><button class="btn-del" onclick="window.removerItemVendaDescarte('${d.id}')">✖</button></td></tr>`;
         });
         document.getElementById('listagem-descartes-recente').innerHTML = has ? html + "</tbody></table>" : "<p style='padding:10px;opacity:0.6'>Nenhum descarte</p>";
-    });
+    };
 
     function popularSelects() {
         const vS = document.getElementById('v-prod'), dS = document.getElementById('d-prod');
@@ -184,6 +184,7 @@
         const p = cacheProdutos.find(x => x.id === document.getElementById('d-prod').value);
         await addDoc(collection(db, "vendas"), { data: document.getElementById('d-data').value, prodNome: "[DESCARTE] " + p.nome, custoUn: p.custo, precoUn: 0, qtd: parseInt(document.getElementById('d-qtd').value), timestamp: new Date().getTime() });
         e.target.reset(); popularSelects();
+        window.carregarDescartesManualmente(); // Atualiza a lista após lançar
     };
 
     window.carregarRelatorio = async (agrupar) => {
@@ -237,6 +238,7 @@
     };
 
     window.removerItem = async (c, id) => { if(confirm("Excluir registro?")) await deleteDoc(doc(db, c, id)); };
+    window.removerItemVendaDescarte = async (id) => { if(confirm("Excluir este descarte?")) { await deleteDoc(doc(db, 'vendas', id)); window.carregarDescartesManualmente(); } };
     window.onload = () => popularSelects();
 </script>
 </body>
