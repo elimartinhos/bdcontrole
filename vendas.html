@@ -8,7 +8,6 @@
     <style>
         :root { 
             --primary: #FBBF24; 
-            --success-dark: #064e3b; /* Verde bem escuro */
             --bg: #823B28; 
             --surface: #9B4630; 
             --text: #FFF0C9; 
@@ -17,7 +16,6 @@
         }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
-        /* Força o preenchimento da tela sem scroll */
         html, body { 
             height: 100%; 
             margin: 0; 
@@ -58,7 +56,6 @@
             justify-content: center; 
         }
 
-        /* O formulário ocupa o espaço central e empurra o botão para baixo */
         .main-form { 
             flex: 1; 
             display: flex; 
@@ -68,7 +65,7 @@
             overflow: hidden;
         }
 
-        .input-group { display: flex; flex-direction: column; flex: 1; max-height: 25%; }
+        .input-group { display: flex; flex-direction: column; flex: 1.2; max-height: 25%; }
         
         select#v-prod { 
             height: 100%; width: 100%; border: 3px solid var(--border); border-radius: 15px; 
@@ -80,33 +77,33 @@
         .row { display: flex; gap: 10px; flex: 1.5; }
 
         .qty-container { flex: 1; display: flex; background: var(--surface); border: 3px solid var(--border); border-radius: 15px; overflow: hidden; }
-        .qty-num { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 900; border-right: 2px solid var(--border); }
+        .qty-num { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 45px; font-weight: 900; border-right: 2px solid var(--border); }
         .qty-btns { flex: 0.8; display: flex; flex-direction: column; }
-        .qty-btns button { flex: 1; border: none; background: transparent; color: var(--text); font-size: 30px; font-weight: bold; cursor: pointer; }
+        .qty-btns button { flex: 1; border: none; background: transparent; color: var(--text); font-size: 35px; font-weight: bold; cursor: pointer; }
         .qty-btns button:first-child { border-bottom: 2px solid var(--border); }
 
         .price-container { flex: 1; display: flex; flex-direction: column; background: var(--surface); border: 3px solid var(--border); border-radius: 15px; padding: 5px; }
         .price-label { font-size: 12px; font-weight: bold; text-align: center; opacity: 0.8; }
         .price-input-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; }
-        .price-input-wrapper span { font-size: 20px; font-weight: bold; margin-right: 4px; color: var(--text); }
-        .price-input-wrapper input { background: transparent; border: none; color: var(--text); font-size: 28px; font-weight: 900; width: 100%; text-align: center; outline: none; }
+        .price-input-wrapper span { font-size: 22px; font-weight: bold; margin-right: 4px; color: var(--text); }
+        .price-input-wrapper input { background: transparent; border: none; color: var(--text); font-size: 32px; font-weight: 900; width: 100%; text-align: center; outline: none; }
 
-        /* Botão fixado no final do container flex */
+        /* Botão LANÇAR com as mesmas cores dos painéis */
         .btn-submit { 
             flex: 0 0 auto; 
-            background: var(--success-dark); 
-            color: var(--text); /* Cor bege igual às outras fontes */
-            border: none; 
+            background: var(--surface); 
+            color: var(--text); 
+            border: 3px solid var(--border); 
             padding: 22px; 
             border-radius: 15px; 
             font-size: 28px; 
             font-weight: 900; 
             cursor: pointer; 
-            box-shadow: 0 6px 0 #022c22; 
+            box-shadow: 0 6px 0 var(--border); 
             margin-top: 10px;
             text-transform: uppercase;
         }
-        .btn-submit:active { transform: translateY(4px); box-shadow: 0 2px 0 #022c22; }
+        .btn-submit:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--border); }
 
         /* Modal Histórico */
         .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: none; flex-direction: column; z-index: 10; }
@@ -190,7 +187,6 @@
     window.changeQty = (v) => {
         currentQty = Math.max(1, currentQty + v);
         document.getElementById('qty-display').innerText = currentQty;
-        // Recalcula o preço total se houver produto selecionado
         setPrecoSugerido();
     };
 
