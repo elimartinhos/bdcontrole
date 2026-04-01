@@ -7,63 +7,131 @@
     <link rel="icon" href="favicao.png" type="image/png">
     <style>
         :root { 
-            --primary: #FBBF24; --success: #4ADE80; --bg: #823B28; 
-            --surface: #9B4630; --text: #FFF0C9; --border: #6B291A; --delete: #FCA5A5;
+            --primary: #FBBF24; 
+            --success-dark: #064e3b; /* Verde bem escuro */
+            --bg: #823B28; 
+            --surface: #9B4630; 
+            --text: #FFF0C9; 
+            --border: #6B291A; 
+            --delete: #FCA5A5;
         }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        html, body { height: 100%; margin: 0; padding: 0; font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
-        .app-container { display: flex; flex-direction: column; height: 100vh; padding: 15px; }
-
-        .header { display: flex; justify-content: space-between; align-items: center; flex: 0 0 auto; margin-bottom: 10px; }
-        .header img { height: 35px; width: auto; }
-        .btn-history { background: var(--surface); border: 2px solid var(--border); color: var(--text); border-radius: 50%; width: 50px; height: 50px; font-size: 22px; cursor: pointer; }
-
-        .main-form { flex: 1; display: flex; flex-direction: column; gap: 10px; justify-content: space-between; }
-
-        /* Produto: SELECIONE O PRODUTO */
-        .input-group { display: flex; flex-direction: column; flex: 1; position: relative; }
-        select#v-prod { 
-            flex: 1; width: 100%; border: 3px solid var(--border); border-radius: 15px; 
-            background: var(--surface); color: var(--text); font-size: 24px; font-weight: 900;
-            text-align: center; text-align-last: center; appearance: none;
-            line-height: 1.2; padding: 10px;
+        
+        /* Força o preenchimento da tela sem scroll */
+        html, body { 
+            height: 100%; 
+            margin: 0; 
+            padding: 0; 
+            font-family: system-ui, sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            overflow: hidden; 
+        }
+        
+        .app-container { 
+            display: flex; 
+            flex-direction: column; 
+            height: 100dvh; /* Dynamic Viewport Height para mobile */
+            padding: 15px; 
         }
 
-        .row { display: flex; gap: 10px; flex: 1.2; }
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            flex: 0 0 auto; 
+            margin-bottom: 10px; 
+        }
+        .header img { height: 40px; width: auto; }
+        
+        .btn-history { 
+            background: var(--surface); 
+            border: 2px solid var(--border); 
+            color: var(--text); 
+            border-radius: 50%; 
+            width: 50px; 
+            height: 50px; 
+            font-size: 22px; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
 
-        /* Quantidade: Metade Numero / Metade Botões empilhados */
+        /* O formulário ocupa o espaço central e empurra o botão para baixo */
+        .main-form { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+            justify-content: flex-start;
+            overflow: hidden;
+        }
+
+        .input-group { display: flex; flex-direction: column; flex: 1; max-height: 25%; }
+        
+        select#v-prod { 
+            height: 100%; width: 100%; border: 3px solid var(--border); border-radius: 15px; 
+            background: var(--surface); color: var(--text); font-size: 22px; font-weight: 900;
+            text-align: center; text-align-last: center; appearance: none;
+            line-height: 1.1; padding: 10px;
+        }
+
+        .row { display: flex; gap: 10px; flex: 1.5; }
+
         .qty-container { flex: 1; display: flex; background: var(--surface); border: 3px solid var(--border); border-radius: 15px; overflow: hidden; }
         .qty-num { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 900; border-right: 2px solid var(--border); }
-        .qty-btns { flex: 1; display: flex; flex-direction: column; }
+        .qty-btns { flex: 0.8; display: flex; flex-direction: column; }
         .qty-btns button { flex: 1; border: none; background: transparent; color: var(--text); font-size: 30px; font-weight: bold; cursor: pointer; }
-        .qty-btns button:active { background: rgba(255,255,255,0.1); }
         .qty-btns button:first-child { border-bottom: 2px solid var(--border); }
 
-        /* Preço: R$ fixo em cima */
         .price-container { flex: 1; display: flex; flex-direction: column; background: var(--surface); border: 3px solid var(--border); border-radius: 15px; padding: 5px; }
-        .price-label { font-size: 14px; font-weight: bold; text-align: center; opacity: 0.7; }
+        .price-label { font-size: 12px; font-weight: bold; text-align: center; opacity: 0.8; }
         .price-input-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; }
-        .price-input-wrapper span { font-size: 24px; font-weight: bold; margin-right: 5px; }
-        .price-input-wrapper input { background: transparent; border: none; color: var(--text); font-size: 32px; font-weight: 900; width: 100%; text-align: center; outline: none; }
+        .price-input-wrapper span { font-size: 20px; font-weight: bold; margin-right: 4px; color: var(--text); }
+        .price-input-wrapper input { background: transparent; border: none; color: var(--text); font-size: 28px; font-weight: 900; width: 100%; text-align: center; outline: none; }
 
-        .btn-submit { flex: 0 0 auto; background: var(--success); color: var(--bg); border: none; padding: 25px; border-radius: 15px; font-size: 26px; font-weight: 900; cursor: pointer; box-shadow: 0 6px 0 #166534; }
-        .btn-submit:active { transform: translateY(4px); box-shadow: 0 2px 0 #166534; }
+        /* Botão fixado no final do container flex */
+        .btn-submit { 
+            flex: 0 0 auto; 
+            background: var(--success-dark); 
+            color: var(--text); /* Cor bege igual às outras fontes */
+            border: none; 
+            padding: 22px; 
+            border-radius: 15px; 
+            font-size: 28px; 
+            font-weight: 900; 
+            cursor: pointer; 
+            box-shadow: 0 6px 0 #022c22; 
+            margin-top: 10px;
+            text-transform: uppercase;
+        }
+        .btn-submit:active { transform: translateY(4px); box-shadow: 0 2px 0 #022c22; }
 
+        /* Modal Histórico */
         .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: none; flex-direction: column; z-index: 10; }
         .modal.active { display: flex; }
         .history-list { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-        .history-item { background: var(--surface); padding: 15px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .btn-close-large { background: var(--primary); color: var(--bg); border: none; padding: 25px; font-size: 20px; font-weight: 900; width: 100%; }
+        .history-item { background: var(--surface); padding: 15px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border); }
+        .btn-close-large { background: var(--primary); color: var(--bg); border: none; padding: 25px; font-size: 20px; font-weight: 900; width: 100%; text-transform: uppercase; }
     </style>
 </head>
 <body>
 <div class="app-container">
-    <div class="header"><img src="brevelogo.png" alt="Logo"><button class="btn-history" onclick="toggleHistory(true)">🕒</button></div>
+    <div class="header">
+        <img src="breveapp.png" alt="Logo">
+        <button class="btn-history" onclick="toggleHistory(true)">🕒</button>
+    </div>
+    
     <form id="form-venda" class="main-form">
         <input type="date" id="v-data" style="display:none">
+        
         <div class="input-group">
-            <select id="v-prod" onchange="setPrecoSugerido()" required></select>
+            <select id="v-prod" onchange="setPrecoSugerido()" required>
+                <option value="">SELECIONE&#10;O&#10;PRODUTO</option>
+            </select>
         </div>
+
         <div class="row">
             <div class="qty-container">
                 <div class="qty-num" id="qty-display">1</div>
@@ -74,13 +142,18 @@
             </div>
             <div class="price-container">
                 <div class="price-label">VALOR TOTAL</div>
-                <div class="price-input-wrapper"><span>R$</span><input type="number" id="v-preco" step="0.01" required></div>
+                <div class="price-input-wrapper">
+                    <span>R$</span>
+                    <input type="number" id="v-preco" step="0.01" required>
+                </div>
             </div>
         </div>
-        <button type="submit" class="btn-submit">GRAVAR VENDA</button>
+
+        <button type="submit" class="btn-submit">LANÇAR</button>
     </form>
+
     <div id="modal-history" class="modal">
-        <div style="padding:15px; text-align:center"><h2>HISTÓRICO</h2></div>
+        <div style="padding:15px; text-align:center; border-bottom: 2px solid var(--border)"><h2>HISTÓRICO RECENTE</h2></div>
         <div class="history-list" id="listagem-history"></div>
         <button class="btn-close-large" onclick="toggleHistory(false)">VOLTAR</button>
     </div>
@@ -90,7 +163,15 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    const firebaseConfig = { apiKey: "AIzaSyB861qyg_6svQUqrd069ZPAfPH6ZRWbBCs", authDomain: "breve-deleite.firebaseapp.com", projectId: "breve-deleite", storageBucket: "breve-deleite.firebasestorage.app", messagingSenderId: "271773334620", appId: "1:271773334620:web:3d50bdc91efda9aa8efa99" };
+    const firebaseConfig = { 
+        apiKey: "AIzaSyB861qyg_6svQUqrd069ZPAfPH6ZRWbBCs", 
+        authDomain: "breve-deleite.firebaseapp.com", 
+        projectId: "breve-deleite", 
+        storageBucket: "breve-deleite.firebasestorage.app", 
+        messagingSenderId: "271773334620", 
+        appId: "1:271773334620:web:3d50bdc91efda9aa8efa99" 
+    };
+    
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     let cacheProds = [], currentQty = 1;
@@ -109,11 +190,13 @@
     window.changeQty = (v) => {
         currentQty = Math.max(1, currentQty + v);
         document.getElementById('qty-display').innerText = currentQty;
+        // Recalcula o preço total se houver produto selecionado
+        setPrecoSugerido();
     };
 
     window.setPrecoSugerido = () => {
         const p = cacheProds.find(x => x.id === document.getElementById('v-prod').value);
-        if(p) document.getElementById('v-preco').value = p.preco;
+        if(p) document.getElementById('v-preco').value = (p.preco * currentQty).toFixed(2);
     };
 
     document.getElementById('form-venda').onsubmit = async (e) => {
@@ -124,30 +207,37 @@
 
         await addDoc(collection(db, "vendas"), {
             data: document.getElementById('v-data').value,
-            prodNome: p.nome, custoUn: p.custo,
-            precoUn: parseFloat(document.getElementById('v-preco').value),
+            prodNome: p.nome, 
+            custoUn: p.custo,
+            precoUn: parseFloat(document.getElementById('v-preco').value) / currentQty,
             qtd: currentQty,
             timestamp: new Date().getTime()
         });
         
-        currentQty = 1; document.getElementById('qty-display').innerText = 1;
-        e.target.reset(); btn.innerText = "GRAVAR VENDA"; btn.disabled = false;
+        currentQty = 1; 
+        document.getElementById('qty-display').innerText = 1;
+        e.target.reset(); 
+        btn.innerText = "LANÇAR"; 
+        btn.disabled = false;
     };
 
     window.toggleHistory = (s) => document.getElementById('modal-history').classList.toggle('active', s);
 
-    const q = query(collection(db, "vendas"), orderBy("data", "desc"), limit(20));
+    const q = query(collection(db, "vendas"), orderBy("timestamp", "desc"), limit(20));
     onSnapshot(q, (snap) => {
         let html = "";
         snap.forEach(doc => {
             const v = doc.data();
-            html += `<div class="history-item"><div><strong>${v.prodNome} (${v.qtd}x)</strong><br><small>${v.data}</small></div>
-            <button style="background:var(--delete); border:none; padding:10px; border-radius:5px" onclick="window.delVenda('${doc.id}')">✖</button></div>`;
+            const total = (v.precoUn * v.qtd).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+            html += `<div class="history-item">
+                <div><strong>${v.prodNome} (${v.qtd}x)</strong><br><small>${total}</small></div>
+                <button style="background:var(--delete); border:none; padding:12px; border-radius:8px; font-weight:bold; color:#823B28" onclick="window.delVenda('${doc.id}')">✖</button>
+            </div>`;
         });
-        document.getElementById('listagem-history').innerHTML = html;
+        document.getElementById('listagem-history').innerHTML = html || "<p style='text-align:center'>Sem vendas recentes.</p>";
     });
 
-    window.delVenda = async (id) => { if(confirm("Excluir?")) await deleteDoc(doc(db, "vendas", id)); };
+    window.delVenda = async (id) => { if(confirm("Deseja apagar esta venda?")) await deleteDoc(doc(db, "vendas", id)); };
 </script>
 </body>
 </html>
