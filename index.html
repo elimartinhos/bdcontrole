@@ -77,18 +77,18 @@
             <div class="form-group"><label>Produto</label><select id="v-prod" onchange="setPrecoSugerido()" required></select></div>
             <div class="form-group"><label>Qtd</label><input type="number" id="v-qtd" min="1" value="1" required></div>
             <div class="form-group"><label>Preço Venda (R$)</label><input type="number" id="v-preco" step="0.01" required></div>
-            <div class="form-group"><label>&nbsp;</label><button type="submit" class="btn-action">Confirmar</button></div>
+            <div class="form-group"><label>&nbsp;</label><button type="submit" class="btn-action">Confirmar Venda</button></div>
         </form>
+        <h3>Vendas Recentes</h3>
         <div id="listagem-vendas-recente" class="table-container"></div>
     </div>
 
     <div id="descarte" class="section">
         <h3 style="color:var(--delete)">Registrar Descarte (Perda)</h3>
-        <p style="font-size: 13px; opacity: 0.8;">O custo será puxado automaticamente e o preço de venda será zero.</p>
         <form id="form-descarte" class="form-grid">
             <div class="form-group"><label>Data</label><input type="date" id="d-data" required></div>
-            <div class="form-group"><label>Produto Vencido</label><select id="d-prod" required></select></div>
-            <div class="form-group"><label>Qtd Descartada</label><input type="number" id="d-qtd" min="1" value="1" required></div>
+            <div class="form-group"><label>Produto</label><select id="d-prod" required></select></div>
+            <div class="form-group"><label>Qtd</label><input type="number" id="d-qtd" min="1" value="1" required></div>
             <div class="form-group"><label>&nbsp;</label><button type="submit" class="btn-action" style="background:var(--waste); color:white">Lançar Perda</button></div>
         </form>
     </div>
@@ -115,7 +115,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, query, orderBy, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy, onSnapshot, deleteDoc, doc, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = { apiKey: "AIzaSyB861qyg_6svQUqrd069ZPAfPH6ZRWbBCs", authDomain: "breve-deleite.firebaseapp.com", projectId: "breve-deleite", storageBucket: "breve-deleite.firebasestorage.app", messagingSenderId: "271773334620", appId: "1:271773334620:web:3d50bdc91efda9aa8efa99" };
     const app = initializeApp(firebaseConfig);
@@ -131,6 +131,7 @@
         if(id === 'vendas' || id === 'descarte') popularSelects();
     };
 
+    // Monitorar Produtos
     onSnapshot(collection(db, "produtos"), (snap) => {
         cacheProdutos = snap.docs.map(d => ({id: d.id, ...d.data()}));
         let html = `<table><thead><tr><th>Produto</th><th>Preço</th><th>Ação</th></tr></thead><tbody>`;
@@ -138,12 +139,22 @@
         document.getElementById('listagem-produtos').innerHTML = html + `</tbody></table>`;
     });
 
+    // Monitorar Vendas Recentes (Aba Vendas)
+    onSnapshot(query(collection(db, "vendas"), orderBy("timestamp", "desc"), limit(10)), (snap) => {
+        let html = `<table><thead><tr><th>Data</th><th>Produto</th><th>Total</th><th>Ação</th></tr></thead><tbody>`;
+        snap.forEach(doc => {
+            const v = doc.data();
+            html += `<tr><td>${v.data.split('-').reverse().slice(0,2).join('/')}</td><td>${v.prodNome}</td><td>${fmt(v.precoUn * v.qtd)}</td><td><button class="btn-del" onclick="window.removerItem('vendas','${doc.id}')">✖</button></td></tr>`;
+        });
+        document.getElementById('listagem-vendas-recente').innerHTML = html + `</tbody></table>`;
+    });
+
     function popularSelects() {
         const vSel = document.getElementById('v-prod');
         const dSel = document.getElementById('d-prod');
         const options = '<option value="">Selecione...</option>' + cacheProdutos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
-        vSel.innerHTML = options;
-        dSel.innerHTML = options;
+        if(vSel) vSel.innerHTML = options;
+        if(dSel) dSel.innerHTML = options;
         document.getElementById('v-data').valueAsDate = new Date();
         document.getElementById('d-data').valueAsDate = new Date();
     }
@@ -153,7 +164,6 @@
         if(p) document.getElementById('v-preco').value = p.preco;
     };
 
-    // LANÇAR VENDA
     document.getElementById('form-venda').onsubmit = async (e) => {
         e.preventDefault();
         const p = cacheProdutos.find(x => x.id === document.getElementById('v-prod').value);
@@ -165,31 +175,25 @@
             timestamp: new Date().getTime()
         });
         e.target.reset(); popularSelects();
-        alert("Venda registrada!");
     };
 
-    // LANÇAR DESCARTE (Preço de venda sempre 0)
     document.getElementById('form-descarte').onsubmit = async (e) => {
         e.preventDefault();
         const p = cacheProdutos.find(x => x.id === document.getElementById('d-prod').value);
         await addDoc(collection(db, "vendas"), {
             data: document.getElementById('d-data').value,
-            prodNome: "[DESCARTE] " + p.nome, 
-            custoUn: p.custo,
-            precoUn: 0, // Preço zero gera lucro negativo (perda do custo)
+            prodNome: "[DESCARTE] " + p.nome, custoUn: p.custo, precoUn: 0,
             qtd: parseInt(document.getElementById('d-qtd').value),
             timestamp: new Date().getTime()
         });
         e.target.reset(); popularSelects();
-        alert("Descarte registrado como perda.");
+        alert("Descarte registrado!");
     };
 
-    // RELATÓRIOS
     window.carregarRelatorio = async (agrupar) => {
         document.getElementById('pico-chart-wrapper').style.display = 'none';
         const ini = document.getElementById('r-ini').value, fim = document.getElementById('r-fim').value;
         const snap = await getDocs(query(collection(db, "vendas"), orderBy("data", "desc")));
-        
         let rec = 0, cus = 0, dadosAgrupados = {};
         let html = `<table><thead><tr><th>${agrupar ? 'Produto' : 'Data'}</th><th>${agrupar ? 'Qtd' : 'Produto'}</th><th>Total</th><th>Lucro</th></tr></thead><tbody>`;
 
@@ -197,32 +201,20 @@
             const v = doc.data();
             if((ini && v.data < ini) || (fim && v.data > fim)) return;
             const tRec = v.precoUn * v.qtd, tCus = v.custoUn * v.qtd;
-            const tLuc = tRec - tCus;
             rec += tRec; cus += tCus;
-
             if(agrupar) {
                 if(!dadosAgrupados[v.prodNome]) dadosAgrupados[v.prodNome] = { tr:0, tc:0, q:0 };
-                dadosAgrupados[v.prodNome].tr += tRec;
-                dadosAgrupados[v.prodNome].tc += tCus;
-                dadosAgrupados[v.prodNome].q += v.qtd;
+                dadosAgrupados[v.prodNome].tr += tRec; dadosAgrupados[v.prodNome].tc += tCus; dadosAgrupados[v.prodNome].q += v.qtd;
             } else {
-                html += `<tr>
-                    <td>${v.data.split('-').reverse().join('/')}</td>
-                    <td>${v.prodNome} (${v.qtd}x)</td>
-                    <td>${fmt(tRec)}</td>
-                    <td style="color:${tLuc < 0 ? '#ff8a8a' : '#4ADE80'}">${fmt(tLuc)}</td>
-                </tr>`;
+                html += `<tr><td>${v.data.split('-').reverse().join('/')}</td><td>${v.prodNome}</td><td>${fmt(tRec)}</td><td>${fmt(tRec-tCus)}</td></tr>`;
             }
         });
-
         if(agrupar) {
-            Object.keys(dadosAgrupados).forEach(nome => {
-                const d = dadosAgrupados[nome];
-                const luc = d.tr - d.tc;
-                html += `<tr><td>${nome}</td><td>${d.q}x</td><td>${fmt(d.tr)}</td><td style="color:${luc < 0 ? '#ff8a8a' : '#4ADE80'}">${fmt(luc)}</td></tr>`;
+            Object.keys(dadosAgrupados).forEach(n => {
+                const d = dadosAgrupados[n];
+                html += `<tr><td>${n}</td><td>${d.q}x</td><td>${fmt(d.tr)}</td><td>${fmt(d.tr-d.tc)}</td></tr>`;
             });
         }
-
         document.getElementById('res-rec').innerText = fmt(rec);
         document.getElementById('res-cus').innerText = fmt(cus);
         document.getElementById('res-luc').innerText = fmt(rec-cus);
@@ -236,7 +228,6 @@
         const dias = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
         const valores = [0,0,0,0,0,0,0];
         let total = 0;
-
         snap.forEach(doc => {
             const v = doc.data();
             if((ini && v.data < ini) || (fim && v.data > fim)) return;
@@ -244,7 +235,6 @@
             valores[dia] += (v.precoUn * v.qtd);
             total += (v.precoUn * v.qtd);
         });
-
         if(meuGrafico) meuGrafico.destroy();
         meuGrafico = new Chart(document.getElementById('picoChart'), {
             type: 'bar',
@@ -256,6 +246,7 @@
     };
 
     window.removerItem = async (c, id) => { if(confirm("Excluir?")) await deleteDoc(doc(db, c, id)); };
+    window.onload = () => popularSelects();
 </script>
 </body>
 </html>
