@@ -5,32 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Breve Deleite - Controle</title>
     <link rel="icon" href="favicao.png" type="image/png">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { 
             --primary: #FBBF24; --success: #4ADE80; --bg: #823B28; 
             --surface: #9B4630; --text: #FFF0C9; --border: #6B291A; 
-            --edit: #38BDF8; --delete: #FCA5A5; --waste: #ef4444;
+            --edit: #38BDF8; --delete: #FCA5A5; 
         }
         body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; background: var(--bg); color: var(--text); }
         .container { max-width: 900px; margin: auto; background: var(--surface); padding: 25px; border-radius: 12px; box-shadow: 0 10px 20px -5px rgba(0,0,0,0.4); }
         .header-logo { text-align: center; margin-bottom: 25px; }
-        .header-logo img { width: 250px; height: auto; display: block; margin: 0 auto; }
-        .header-logo h2 { margin: 10px 0 0; font-size: 16px; letter-spacing: 4px; font-weight: bold; }
+        .header-logo img { width: 250px; height: auto; display: block; margin: 0 auto; aspect-ratio: 1033 / 537; object-fit: contain; }
+        .header-logo h2 { margin: 10px 0 0; font-size: 16px; letter-spacing: 4px; font-weight: bold; opacity: 0.9; }
+        
         .tabs { display: flex; gap: 8px; margin-bottom: 25px; border-bottom: 2px solid var(--border); padding-bottom: 10px; overflow-x: auto; }
-        .tab { padding: 10px 18px; cursor: pointer; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; font-weight: 600; color: var(--text); }
-        .tab.active { background: var(--primary); color: var(--bg); }
+        .tab { padding: 10px 18px; cursor: pointer; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; font-weight: 600; color: var(--text); white-space: nowrap; transition: 0.2s; }
+        .tab.active { background: var(--primary); color: var(--bg); border-color: var(--primary); }
+        
         .section { display: none; }
         .section.active { display: block; }
+        
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 20px; background: rgba(0,0,0,0.15); padding: 15px; border-radius: 8px; border: 1px solid var(--border); }
         .form-group { display: flex; flex-direction: column; gap: 4px; }
-        label { font-size: 12px; font-weight: bold; opacity: 0.7; }
-        input, select { padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); }
-        .btn-action { background: var(--success); color: var(--bg); border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; text-transform: uppercase; }
-        .table-container { overflow-x: auto; margin-top: 15px; }
-        table { width: 100%; border-collapse: collapse; }
+        label { font-size: 12px; font-weight: bold; color: rgba(255, 240, 201, 0.7); }
+        input, select { padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 15px; background: var(--bg); color: var(--text); color-scheme: dark; }
+        
+        .btn-action { background: var(--success); color: var(--bg); border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.2s; text-transform: uppercase; }
+        
+        .table-container { overflow-x: auto; margin-top: 10px; margin-bottom: 30px; }
+        table { width: 100%; border-collapse: collapse; background: var(--surface); }
         th, td { padding: 12px; border-bottom: 1px solid var(--border); text-align: left; font-size: 14px; }
+        th { background: rgba(0,0,0,0.2); }
+        
+        .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 20px 0; }
+        .card { padding: 15px; background: var(--bg); border-radius: 8px; text-align: center; border: 1px solid var(--border); }
+        .card h3 { margin: 0; font-size: 11px; color: rgba(255, 240, 201, 0.7); text-transform: uppercase; }
+        .card p { margin: 5px 0 0; font-size: 18px; font-weight: bold; }
+        
         .btn-del { color: var(--delete); background: none; border: none; cursor: pointer; font-size: 16px; }
-        .btn-check { background: var(--edit); color: white; margin-bottom: 10px; padding: 8px; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; }
+        .chart-container { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin: 20px 0; display: none; }
+    .pagination-controls { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin: 10px 0; align-items: center; }
+    .pagination-group { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .btn-page { background: var(--bg); color: var(--text); border: 1px solid var(--border); padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .btn-page.active { background: var(--primary); color: var(--bg); border-color: var(--primary); }
+    .btn-page:disabled { opacity: 0.45; cursor: not-allowed; }
+    .pagination-info { font-size: 13px; opacity: 0.8; }
     </style>
 </head>
 <body>
@@ -40,11 +59,11 @@
     <div class="tabs">
         <button class="tab active" onclick="showTab('produtos', this)">📦 Produtos</button>
         <button class="tab" onclick="showTab('vendas', this)">🛒 Vender</button>
-        <button class="tab" onclick="showTab('descarte', this)">🗑️ Descarte</button>
         <button class="tab" onclick="showTab('relatorios', this)">📊 Relatórios</button>
     </div>
 
     <div id="produtos" class="section active">
+        <h3>Cadastrar Produto</h3>
         <form id="form-produto" class="form-grid">
             <div class="form-group"><label>Nome</label><input type="text" id="p-nome" required></div>
             <div class="form-group"><label>Custo (R$)</label><input type="number" id="p-custo" step="0.01" required></div>
@@ -55,35 +74,36 @@
     </div>
 
     <div id="vendas" class="section">
+        <h3>Lançar Venda</h3>
         <form id="form-venda" class="form-grid">
             <div class="form-group"><label>Data</label><input type="date" id="v-data" required></div>
             <div class="form-group"><label>Produto</label><select id="v-prod" onchange="setPrecoSugerido()" required></select></div>
             <div class="form-group"><label>Qtd</label><input type="number" id="v-qtd" min="1" value="1" required></div>
             <div class="form-group"><label>Preço Venda (R$)</label><input type="number" id="v-preco" step="0.01" required></div>
+            <div class="form-group"><label>Descarte</label><input type="checkbox" id="v-descarte" onchange="toggleDescarte()" style="width:18px;height:18px;align-self:flex-start;margin-top:8px"></div>
             <div class="form-group"><label>&nbsp;</label><button type="submit" class="btn-action">Confirmar Venda</button></div>
         </form>
+        <h3>Vendas Recentes</h3>
+        <div id="controles-vendas-recente" class="pagination-controls"></div>
         <div id="listagem-vendas-recente" class="table-container"></div>
-    </div>
-
-    <div id="descarte" class="section">
-        <h3 style="color:var(--delete)">Registrar Perda</h3>
-        <form id="form-descarte" class="form-grid">
-            <div class="form-group"><label>Data</label><input type="date" id="d-data" required></div>
-            <div class="form-group"><label>Produto</label><select id="d-prod" required></select></div>
-            <div class="form-group"><label>Qtd</label><input type="number" id="d-qtd" min="1" value="1" required></div>
-            <div class="form-group"><label>&nbsp;</label><button type="submit" class="btn-action" style="background:var(--waste); color:white">Lançar Descarte</button></div>
-        </form>
-        
-        <button class="btn-check" onclick="window.atualizarListaDescarte()">🔎 CARREGAR HISTÓRICO</button>
-        <div id="listagem-descartes-recente" class="table-container"></div>
     </div>
 
     <div id="relatorios" class="section">
         <div class="form-grid">
             <div class="form-group"><label>Início</label><input type="date" id="r-ini"></div>
             <div class="form-group"><label>Fim</label><input type="date" id="r-fim"></div>
-            <div class="form-group"><label>&nbsp;</label><button onclick="carregarRelatorio(false)" class="btn-action">Ver Vendas</button></div>
+            <div class="form-group"><label>&nbsp;</label><button onclick="carregarRelatorio(false)" class="btn-action">Por Venda</button></div>
+            <div class="form-group"><label>&nbsp;</label><button onclick="carregarRelatorio(true)" class="btn-action" style="background:var(--edit)">Por Produto</button></div>
+            <div class="form-group"><label>&nbsp;</label><button onclick="carregarRelatorioPico()" class="btn-action" style="background:var(--primary); color:var(--bg)">Pico por Dia</button></div>
         </div>
+
+        <div class="summary-cards">
+            <div class="card"><h3>Receita</h3><p id="res-rec">R$ 0,00</p></div>
+            <div class="card"><h3>Custo Total</h3><p id="res-cus">R$ 0,00</p></div>
+            <div class="card" style="border-top:4px solid var(--success)"><h3>Lucro Líquido</h3><p id="res-luc">R$ 0,00</p></div>
+        </div>
+
+        <div id="pico-chart-wrapper" class="chart-container"><canvas id="picoChart"></canvas></div>
         <div id="listagem-vendas" class="table-container"></div>
     </div>
 </div>
@@ -95,7 +115,7 @@
     const firebaseConfig = { apiKey: "AIzaSyB861qyg_6svQUqrd069ZPAfPH6ZRWbBCs", authDomain: "breve-deleite.firebaseapp.com", projectId: "breve-deleite", storageBucket: "breve-deleite.firebasestorage.app", messagingSenderId: "271773334620", appId: "1:271773334620:web:3d50bdc91efda9aa8efa99" };
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    let cacheProdutos = [];
+    let cacheProdutos = [], meuGrafico = null, cacheVendasRecentes = [], vendasRecentesPorPagina = 25, paginaAtualVendasRecentes = 1;
     const fmt = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
     window.showTab = (id, btn) => {
@@ -103,7 +123,7 @@
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         btn.classList.add('active');
-        if(id === 'vendas' || id === 'descarte') popularSelects();
+        if(id === 'vendas') popularSelects();
     };
 
     onSnapshot(collection(db, "produtos"), (snap) => {
@@ -113,48 +133,77 @@
         document.getElementById('listagem-produtos').innerHTML = h + `</tbody></table>`;
     });
 
-    // FUNÇÃO QUE VOCÊ VAI CLICAR NO BOTÃO PARA TESTAR
-    window.atualizarListaDescarte = async () => {
-        const snap = await getDocs(query(collection(db, "vendas"), orderBy("timestamp", "desc"), limit(100)));
-        let h = `<table><thead><tr><th>Data</th><th>Produto</th><th>Custo Perda</th><th>Ação</th></tr></thead><tbody>`;
-        let tem = false;
-        snap.forEach(docSnap => {
-            const v = docSnap.data();
-            // Verifica se é descarte pelo nome ou pelo preço zero
-            if (String(v.prodNome).includes("[DESCARTE]") || v.precoUn === 0) {
-                tem = true;
-                const d = v.data.split('-').reverse().slice(0,2).join('/');
-                h += `<tr><td>${d}</td><td>${v.prodNome.replace("[DESCARTE] ", "")}</td><td>${fmt(v.custoUn * v.qtd)}</td><td><button class="btn-del" onclick="window.removerDescarte('${docSnap.id}')">✖</button></td></tr>`;
-            }
+    function renderVendasRecentes() {
+        const totalItens = cacheVendasRecentes.length;
+        const totalPaginas = Math.max(1, Math.ceil(totalItens / vendasRecentesPorPagina));
+        if(paginaAtualVendasRecentes > totalPaginas) paginaAtualVendasRecentes = totalPaginas;
+        if(paginaAtualVendasRecentes < 1) paginaAtualVendasRecentes = 1;
+
+        const inicio = (paginaAtualVendasRecentes - 1) * vendasRecentesPorPagina;
+        const fim = inicio + vendasRecentesPorPagina;
+        const itens = cacheVendasRecentes.slice(inicio, fim);
+        const controles = document.getElementById('controles-vendas-recente');
+
+        controles.innerHTML = `<div class="pagination-group"><span class="pagination-info">Por página:</span><button class="btn-page ${vendasRecentesPorPagina === 25 ? 'active' : ''}" onclick="window.definirItensPorPaginaVendasRecentes(25)">25</button><button class="btn-page ${vendasRecentesPorPagina === 50 ? 'active' : ''}" onclick="window.definirItensPorPaginaVendasRecentes(50)">50</button><button class="btn-page ${vendasRecentesPorPagina === 100 ? 'active' : ''}" onclick="window.definirItensPorPaginaVendasRecentes(100)">100</button></div><div class="pagination-group"><button class="btn-page" onclick="window.mudarPaginaVendasRecentes(-1)" ${paginaAtualVendasRecentes === 1 ? 'disabled' : ''}>◀</button><span class="pagination-info">Página ${paginaAtualVendasRecentes} de ${totalPaginas}</span><button class="btn-page" onclick="window.mudarPaginaVendasRecentes(1)" ${paginaAtualVendasRecentes === totalPaginas ? 'disabled' : ''}>▶</button></div>`;
+
+        if(!itens.length) {
+            document.getElementById('listagem-vendas-recente').innerHTML = "<p style='padding:10px;opacity:0.6'>Nenhuma venda recente.</p>";
+            return;
+        }
+
+        let h = `<table><thead><tr><th>Data</th><th>Produto</th><th>Total</th><th>Ação</th></tr></thead><tbody>`;
+        itens.forEach(v => {
+            const nomeExibicao = (v.precoUn === 0 && !String(v.prodNome || '').startsWith('[Descarte]')) ? `[Descarte] ${v.prodNome}` : v.prodNome;
+            h += `<tr><td>${v.data.split('-').reverse().slice(0,2).join('/')}</td><td>${nomeExibicao}</td><td>${fmt(v.precoUn * v.qtd)}</td><td><button class="btn-del" onclick="window.removerItem('vendas','${v.id}')">✖</button></td></tr>`;
         });
-        document.getElementById('listagem-descartes-recente').innerHTML = tem ? h + "</tbody></table>" : "<p>Nenhum descarte</p>";
+        document.getElementById('listagem-vendas-recente').innerHTML = h + "</tbody></table>";
+    }
+
+    window.definirItensPorPaginaVendasRecentes = (qtd) => {
+        vendasRecentesPorPagina = qtd;
+        paginaAtualVendasRecentes = 1;
+        renderVendasRecentes();
     };
 
-    // Vendas Recentes (Automático)
-    onSnapshot(query(collection(db, "vendas"), orderBy("timestamp", "desc"), limit(30)), (snap) => {
-        let h = `<table><thead><tr><th>Data</th><th>Produto</th><th>Total</th><th>Ação</th></tr></thead><tbody>`;
-        let tem = false;
-        snap.forEach(d => {
-            const v = d.data();
-            if (!String(v.prodNome).includes("[DESCARTE]") && v.precoUn > 0) {
-                tem = true;
-                h += `<tr><td>${v.data.split('-').reverse().slice(0,2).join('/')}</td><td>${v.prodNome}</td><td>${fmt(v.precoUn * v.qtd)}</td><td><button class="btn-del" onclick="window.removerItem('vendas','${d.id}')">✖</button></td></tr>`;
-            }
+    window.mudarPaginaVendasRecentes = (delta) => {
+        const totalPaginas = Math.max(1, Math.ceil(cacheVendasRecentes.length / vendasRecentesPorPagina));
+        paginaAtualVendasRecentes = Math.min(totalPaginas, Math.max(1, paginaAtualVendasRecentes + delta));
+        renderVendasRecentes();
+    };
+
+    onSnapshot(query(collection(db, "vendas"), orderBy("timestamp", "desc")), (snap) => {
+        cacheVendasRecentes = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => {
+            const cmpData = String(b.data || '').localeCompare(String(a.data || ''));
+            if(cmpData !== 0) return cmpData;
+            return (b.timestamp || 0) - (a.timestamp || 0);
         });
-        document.getElementById('listagem-vendas-recente').innerHTML = tem ? h + "</tbody></table>" : "<p>Nenhuma venda recente.</p>";
+        renderVendasRecentes();
     });
 
     function popularSelects() {
-        const vS = document.getElementById('v-prod'), dS = document.getElementById('d-prod');
+        const vS = document.getElementById('v-prod');
         const opts = '<option value="">Selecione...</option>' + cacheProdutos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
-        if(vS) vS.innerHTML = opts; if(dS) dS.innerHTML = opts;
+        if(vS) vS.innerHTML = opts;
         document.getElementById('v-data').valueAsDate = new Date();
-        document.getElementById('d-data').valueAsDate = new Date();
+        document.getElementById('v-descarte').checked = false;
+        toggleDescarte();
     }
 
     window.setPrecoSugerido = () => {
         const p = cacheProdutos.find(x => x.id === document.getElementById('v-prod').value);
-        if(p) document.getElementById('v-preco').value = p.preco;
+        if(p && !document.getElementById('v-descarte').checked) document.getElementById('v-preco').value = p.preco;
+    };
+
+    window.toggleDescarte = () => {
+        const campoPreco = document.getElementById('v-preco');
+        const descarte = document.getElementById('v-descarte').checked;
+        campoPreco.disabled = descarte;
+        campoPreco.required = !descarte;
+        if(descarte) {
+            campoPreco.value = 0;
+        } else {
+            setPrecoSugerido();
+        }
     };
 
     document.getElementById('form-produto').onsubmit = async (e) => {
@@ -166,21 +215,71 @@
     document.getElementById('form-venda').onsubmit = async (e) => {
         e.preventDefault();
         const p = cacheProdutos.find(x => x.id === document.getElementById('v-prod').value);
-        await addDoc(collection(db, "vendas"), { data: document.getElementById('v-data').value, prodNome: p.nome, custoUn: p.custo, precoUn: parseFloat(document.getElementById('v-preco').value), qtd: parseInt(document.getElementById('v-qtd').value), timestamp: new Date().getTime() });
-        e.target.reset();
+        const descarte = document.getElementById('v-descarte').checked;
+        await addDoc(collection(db, "vendas"), { data: document.getElementById('v-data').value, prodNome: descarte ? `[Descarte] ${p.nome}` : p.nome, custoUn: p.custo, precoUn: descarte ? 0 : parseFloat(document.getElementById('v-preco').value), qtd: parseInt(document.getElementById('v-qtd').value), timestamp: new Date().getTime() });
+        e.target.reset(); popularSelects();
     };
 
-    document.getElementById('form-descarte').onsubmit = async (e) => {
-        e.preventDefault();
-        const p = cacheProdutos.find(x => x.id === document.getElementById('d-prod').value);
-        await addDoc(collection(db, "vendas"), { data: document.getElementById('d-data').value, prodNome: "[DESCARTE] " + p.nome, custoUn: p.custo, precoUn: 0, qtd: parseInt(document.getElementById('d-qtd').value), timestamp: new Date().getTime() });
-        e.target.reset();
-        window.atualizarListaDescarte(); // Atualiza na hora
+    window.carregarRelatorio = async (agrupar) => {
+        document.getElementById('pico-chart-wrapper').style.display = 'none';
+        const ini = document.getElementById('r-ini').value, fim = document.getElementById('r-fim').value;
+        const snap = await getDocs(query(collection(db, "vendas"), orderBy("data", "desc")));
+        let rec = 0, cus = 0, dadosA = {};
+        let html = `<table><thead><tr><th>${agrupar ? 'Produto' : 'Data'}</th><th>${agrupar ? 'Qtd' : 'Produto'}</th><th>Total</th><th>Lucro</th></tr></thead><tbody>`;
+        
+        snap.forEach(d => {
+            const v = d.data();
+            if((ini && v.data < ini) || (fim && v.data > fim)) return;
+            const tR = v.precoUn * v.qtd, tC = v.custoUn * v.qtd, tL = tR - tC;
+            rec += tR; cus += tC;
+            if(agrupar) {
+                if(!dadosA[v.prodNome]) dadosA[v.prodNome] = { tr:0, tc:0, q:0 };
+                dadosA[v.prodNome].tr += tR; dadosA[v.prodNome].tc += tC; dadosA[v.prodNome].q += v.qtd;
+            } else {
+                html += `<tr><td>${v.data.split('-').reverse().join('/')}</td><td>${v.prodNome}</td><td>${fmt(tR)}</td><td style="color:${tL < 0 ? '#ff8a8a' : '#4ADE80'}">${fmt(tL)}</td></tr>`;
+            }
+        });
+        
+        if(agrupar) {
+            Object.keys(dadosA).forEach(n => {
+                const d = dadosA[n]; const l = d.tr - d.tc;
+                html += `<tr><td>${n}</td><td>${d.q}x</td><td>${fmt(d.tr)}</td><td style="color:${l < 0 ? '#ff8a8a' : '#4ADE80'}">${fmt(l)}</td></tr>`;
+            });
+        }
+        document.getElementById('res-rec').innerText = fmt(rec);
+        document.getElementById('res-cus').innerText = fmt(cus);
+        document.getElementById('res-luc').innerText = fmt(rec-cus);
+        document.getElementById('listagem-vendas').innerHTML = html + "</tbody></table>";
     };
 
-    window.removerItem = async (c, id) => { if(confirm("Excluir?")) await deleteDoc(doc(db, c, id)); };
-    window.removerDescarte = async (id) => { if(confirm("Excluir descarte?")) { await deleteDoc(doc(db, 'vendas', id)); window.atualizarListaDescarte(); } };
-    window.onload = () => { popularSelects(); };
+    window.carregarRelatorioPico = async () => {
+        document.getElementById('pico-chart-wrapper').style.display = 'block';
+        const ini = document.getElementById('r-ini').value, fim = document.getElementById('r-fim').value;
+        const snap = await getDocs(collection(db, "vendas"));
+        const dias = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+        const vals = [0,0,0,0,0,0,0];
+        let total = 0;
+        
+        snap.forEach(d => {
+            const v = d.data();
+            if((ini && v.data < ini) || (fim && v.data > fim)) return;
+            const dia = new Date(v.data + "T00:00:00").getDay();
+            vals[dia] += (v.precoUn * v.qtd);
+            total += (v.precoUn * v.qtd);
+        });
+        
+        if(meuGrafico) meuGrafico.destroy();
+        meuGrafico = new Chart(document.getElementById('picoChart'), { 
+            type: 'bar', 
+            data: { labels: dias, datasets: [{ label: 'Receita', data: vals, backgroundColor: '#FBBF24' }] }, 
+            options: { scales: { y: { beginAtZero: true, ticks: { color: '#FFF0C9' } }, x: { ticks: { color: '#FFF0C9' } } } } 
+        });
+        document.getElementById('res-rec').innerText = fmt(total);
+        document.getElementById('listagem-vendas').innerHTML = "";
+    };
+
+    window.removerItem = async (c, id) => { if(confirm("Excluir registro?")) await deleteDoc(doc(db, c, id)); };
+    window.onload = () => popularSelects();
 </script>
 </body>
 </html>
