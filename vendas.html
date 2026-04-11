@@ -210,11 +210,7 @@
             timestamp: new Date().getTime()
         });
         
-        currentQty = 1; 
-        document.getElementById('qty-display').innerText = 1;
-        e.target.reset(); 
-        btn.innerText = "LANÇAR"; 
-        btn.disabled = false;
+        window.location.reload();
     };
 
     window.toggleHistory = (s) => document.getElementById('modal-history').classList.toggle('active', s);
